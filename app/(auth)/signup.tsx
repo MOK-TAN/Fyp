@@ -4,8 +4,6 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,71 +14,87 @@ import {
   View,
 } from 'react-native';
 
-const { width } = Dimensions.get('window');
-
-type UserRole = 'user' | 'parking-owner' | 'land-owner';
-
 const SignUp = () => {
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('user');
+  const [selectedRole, setSelectedRole] = useState<'user' | 'parking-owner' | 'land-owner'>('user');
+  
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Errors
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [confirmPasswordError, setConfirmPasswordError] = useState('');
-
-  // Validate email/phone
-  const validateEmail = (text: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^\+?[\d\s\-()]+$/;
-    return emailRegex.test(text) || phoneRegex.test(text);
-  };
-
-  // Simulate API call delay
+  // Simulate API delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Handle sign up
-  const handleSignUp = async () => {
+  // Validation
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone: string): boolean => {
+    const phoneRegex = /^[0-9]{10}$/;
+    return phoneRegex.test(phone);
+  };
+
+  const validateForm = (): boolean => {
+    let isValid = true;
+
     // Reset errors
+    setPhoneError('');
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
 
-    let hasError = false;
+    // Validate phone
+    if (!phone.trim()) {
+      setPhoneError('Phone number is required');
+      isValid = false;
+    } else if (!validatePhone(phone)) {
+      setPhoneError('Please enter a valid 10-digit phone number');
+      isValid = false;
+    }
 
-    // Validate email/phone
+    // Validate email
     if (!email.trim()) {
-      setEmailError('Phone or email is required');
-      hasError = true;
+      setEmailError('Email is required');
+      isValid = false;
     } else if (!validateEmail(email)) {
-      setEmailError('Please enter a valid phone or email');
-      hasError = true;
+      setEmailError('Please enter a valid email address');
+      isValid = false;
     }
 
     // Validate password
     if (!password.trim()) {
       setPasswordError('Password is required');
-      hasError = true;
+      isValid = false;
     } else if (password.length < 6) {
       setPasswordError('Password must be at least 6 characters');
-      hasError = true;
+      isValid = false;
     }
 
     // Validate confirm password
     if (!confirmPassword.trim()) {
       setConfirmPasswordError('Please confirm your password');
-      hasError = true;
+      isValid = false;
     } else if (password !== confirmPassword) {
       setConfirmPasswordError('Passwords do not match');
-      hasError = true;
+      isValid = false;
     }
 
-    if (hasError) return;
+    return isValid;
+  };
+
+  // Handle sign up
+  const handleSignUp = async () => {
+    if (!validateForm()) return;
 
     setIsLoading(true);
 
@@ -88,41 +102,27 @@ const SignUp = () => {
       // Simulate network delay
       await delay(1000);
 
-      // Sign up successful
+      // Success
       Alert.alert(
-        'Success',
-        `Account created successfully!\nRole: ${selectedRole}`,
+        'Success! 🎉',
+        'Your account has been created successfully. Please login.',
         [
           {
             text: 'OK',
-            onPress: () => {
-              // Navigate based on role
-              switch (selectedRole) {
-                case 'parking-owner':
-                  router.replace('/(parking-owner)');
-                  break;
-                case 'land-owner':
-                  router.replace('/(land-owner)');
-                  break;
-                case 'user':
-                default:
-                  router.replace('/(user)');
-                  break;
-              }
-            },
+            onPress: () => router.replace('/(auth)/login'),
           },
         ]
       );
     } catch (error) {
       console.error('Sign up error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert('Error', 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   // Handle login navigation
-  const handleLogin = () => {
+  const handleLoginNavigation = () => {
     router.push('/(auth)/login');
   };
 
@@ -136,34 +136,67 @@ const SignUp = () => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Image */}
-        <Image
-          source={require('../../assets/images/park.png')}
-          style={styles.image}
-          resizeMode="cover"
-        />
-
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerText}>
-            <Text style={styles.createText}>Create</Text>
-            <Text style={styles.accountText}> your account</Text>
+            <Text style={styles.createText}>Create </Text>
+            <Text style={styles.accountText}>your account</Text>
           </Text>
         </View>
 
-        {/* Phone/Email Input */}
+        {/* Phone Input */}
         <View style={styles.inputContainer}>
-          <View style={[styles.inputWrapper, emailError && styles.inputError]}>
+          <View style={[
+            styles.inputWrapper,
+            phoneError && styles.inputError
+          ]}>
             <Ionicons
-              name="phone-portrait-outline"
+              name="call-outline"
               size={20}
-              color="#999"
+              color={phoneError ? '#EF4444' : '#9CA3AF'}
               style={styles.icon}
             />
             <TextInput
               style={styles.input}
               placeholder="Phone/Email"
-              placeholderTextColor="#999"
+              placeholderTextColor="#9CA3AF"
+              value={phone}
+              onChangeText={(text) => {
+                setPhone(text);
+                if (phoneError) setPhoneError('');
+              }}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isLoading}
+              maxLength={10}
+              returnKeyType="next"
+            />
+          </View>
+          {phoneError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorDot}>•</Text>
+              <Text style={styles.errorText}>{phoneError}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Email Input */}
+        <View style={styles.inputContainer}>
+          <View style={[
+            styles.inputWrapper,
+            emailError && styles.inputError
+          ]}>
+            <Ionicons
+              name="mail-outline"
+              size={20}
+              color={emailError ? '#EF4444' : '#9CA3AF'}
+              style={styles.icon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -173,6 +206,7 @@ const SignUp = () => {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
+              returnKeyType="next"
             />
           </View>
           {emailError ? (
@@ -185,19 +219,20 @@ const SignUp = () => {
 
         {/* Password Input */}
         <View style={styles.inputContainer}>
-          <View
-            style={[styles.inputWrapper, passwordError && styles.inputError]}
-          >
+          <View style={[
+            styles.inputWrapper,
+            passwordError && styles.inputError
+          ]}>
             <Ionicons
               name="lock-closed-outline"
               size={20}
-              color="#999"
+              color={passwordError ? '#EF4444' : '#9CA3AF'}
               style={styles.icon}
             />
             <TextInput
               style={styles.input}
               placeholder="password"
-              placeholderTextColor="#999"
+              placeholderTextColor="#9CA3AF"
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
@@ -207,16 +242,18 @@ const SignUp = () => {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
+              returnKeyType="next"
             />
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeIcon}
               disabled={isLoading}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons
                 name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={20}
-                color="#999"
+                color="#9CA3AF"
               />
             </TouchableOpacity>
           </View>
@@ -230,22 +267,20 @@ const SignUp = () => {
 
         {/* Confirm Password Input */}
         <View style={styles.inputContainer}>
-          <View
-            style={[
-              styles.inputWrapper,
-              confirmPasswordError && styles.inputError,
-            ]}
-          >
+          <View style={[
+            styles.inputWrapper,
+            confirmPasswordError && styles.inputError
+          ]}>
             <Ionicons
               name="lock-closed-outline"
               size={20}
-              color="#999"
+              color={confirmPasswordError ? '#EF4444' : '#9CA3AF'}
               style={styles.icon}
             />
             <TextInput
               style={styles.input}
               placeholder="confirm password"
-              placeholderTextColor="#999"
+              placeholderTextColor="#9CA3AF"
               value={confirmPassword}
               onChangeText={(text) => {
                 setConfirmPassword(text);
@@ -255,16 +290,19 @@ const SignUp = () => {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
+              returnKeyType="done"
+              onSubmitEditing={handleSignUp}
             />
             <TouchableOpacity
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               style={styles.eyeIcon}
               disabled={isLoading}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons
                 name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={20}
-                color="#999"
+                color="#9CA3AF"
               />
             </TouchableOpacity>
           </View>
@@ -278,70 +316,97 @@ const SignUp = () => {
 
         {/* Role Selection */}
         <View style={styles.roleContainer}>
-          {/* User */}
-          <TouchableOpacity
-            style={styles.roleButton}
-            onPress={() => setSelectedRole('user')}
-            disabled={isLoading}
-          >
-            <View
+          <Text style={styles.roleLabel}>I am a:</Text>
+          <View style={styles.roleButtons}>
+            <TouchableOpacity
               style={[
-                styles.radioOuter,
-                selectedRole === 'user' && styles.radioOuterSelected,
+                styles.roleButton,
+                selectedRole === 'user' && styles.roleButtonActive
               ]}
+              onPress={() => setSelectedRole('user')}
+              disabled={isLoading}
+              activeOpacity={0.7}
             >
-              {selectedRole === 'user' && <View style={styles.radioInner} />}
-            </View>
-            <Text style={styles.roleText}>User</Text>
-          </TouchableOpacity>
+              <View style={[
+                styles.roleRadio,
+                selectedRole === 'user' && styles.roleRadioActive
+              ]}>
+                {selectedRole === 'user' && (
+                  <View style={styles.roleRadioInner} />
+                )}
+              </View>
+              <Text style={[
+                styles.roleButtonText,
+                selectedRole === 'user' && styles.roleButtonTextActive
+              ]}>
+                User
+              </Text>
+            </TouchableOpacity>
 
-          {/* Parking Owner */}
-          <TouchableOpacity
-            style={styles.roleButton}
-            onPress={() => setSelectedRole('parking-owner')}
-            disabled={isLoading}
-          >
-            <View
+            <TouchableOpacity
               style={[
-                styles.radioOuter,
-                selectedRole === 'parking-owner' && styles.radioOuterSelected,
+                styles.roleButton,
+                selectedRole === 'parking-owner' && styles.roleButtonActive
               ]}
+              onPress={() => setSelectedRole('parking-owner')}
+              disabled={isLoading}
+              activeOpacity={0.7}
             >
-              {selectedRole === 'parking-owner' && (
-                <View style={styles.radioInner} />
-              )}
-            </View>
-            <Text style={styles.roleText}>Parking owner</Text>
-          </TouchableOpacity>
+              <View style={[
+                styles.roleRadio,
+                selectedRole === 'parking-owner' && styles.roleRadioActive
+              ]}>
+                {selectedRole === 'parking-owner' && (
+                  <View style={styles.roleRadioInner} />
+                )}
+              </View>
+              <Text style={[
+                styles.roleButtonText,
+                selectedRole === 'parking-owner' && styles.roleButtonTextActive
+              ]}>
+                Parking owner
+              </Text>
+            </TouchableOpacity>
 
-          {/* Land Owner */}
-          <TouchableOpacity
-            style={styles.roleButton}
-            onPress={() => setSelectedRole('land-owner')}
-            disabled={isLoading}
-          >
-            <View
+            <TouchableOpacity
               style={[
-                styles.radioOuter,
-                selectedRole === 'land-owner' && styles.radioOuterSelected,
+                styles.roleButton,
+                selectedRole === 'land-owner' && styles.roleButtonActive
               ]}
+              onPress={() => setSelectedRole('land-owner')}
+              disabled={isLoading}
+              activeOpacity={0.7}
             >
-              {selectedRole === 'land-owner' && (
-                <View style={styles.radioInner} />
-              )}
-            </View>
-            <Text style={styles.roleText}>Land owner</Text>
-          </TouchableOpacity>
+              <View style={[
+                styles.roleRadio,
+                selectedRole === 'land-owner' && styles.roleRadioActive
+              ]}>
+                {selectedRole === 'land-owner' && (
+                  <View style={styles.roleRadioInner} />
+                )}
+              </View>
+              <Text style={[
+                styles.roleButtonText,
+                selectedRole === 'land-owner' && styles.roleButtonTextActive
+              ]}>
+                Land owner
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Sign Up Button */}
         <TouchableOpacity
-          style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
+          style={[
+            styles.signUpButton,
+            isLoading && styles.signUpButtonDisabled
+          ]}
           onPress={handleSignUp}
           disabled={isLoading}
+          activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={styles.signUpButtonText}>SIGN UP</Text>
           )}
@@ -350,7 +415,11 @@ const SignUp = () => {
         {/* Login Link */}
         <View style={styles.loginContainer}>
           <Text style={styles.loginText}>Already have account? </Text>
-          <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
+          <TouchableOpacity
+            onPress={handleLoginNavigation}
+            disabled={isLoading}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Text style={styles.loginLink}>Log In</Text>
           </TouchableOpacity>
         </View>
@@ -362,35 +431,30 @@ const SignUp = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 40,
-  },
-  image: {
-    width: '100%',
-    height: 180,
-    borderRadius: 16,
-    marginBottom: 24,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
   },
   header: {
-    marginBottom: 30,
+    marginBottom: 32,
   },
   headerText: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '600',
+    lineHeight: 40,
   },
   createText: {
     color: '#22C55E',
   },
   accountText: {
-    color: '#333',
+    color: '#1F2937',
   },
   inputContainer: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -398,34 +462,35 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E5E7EB',
     borderRadius: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     height: 56,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   inputError: {
     borderColor: '#EF4444',
   },
   icon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: '#1F2937',
+    fontWeight: '400',
   },
   eyeIcon: {
-    padding: 5,
+    padding: 4,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginTop: 6,
-    marginLeft: 15,
+    marginLeft: 16,
   },
   errorDot: {
     color: '#EF4444',
-    fontSize: 18,
-    lineHeight: 18,
+    fontSize: 20,
+    lineHeight: 20,
     marginRight: 4,
   },
   errorText: {
@@ -433,39 +498,64 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     flex: 1,
+    fontWeight: '400',
   },
   roleContainer: {
+    marginTop: 8,
+    marginBottom: 32,
+  },
+  roleLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  roleButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 30,
-    marginTop: 10,
+    gap: 12,
   },
   roleButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
   },
-  radioOuter: {
+  roleButtonActive: {
+    borderColor: '#22C55E',
+    backgroundColor: '#F0FDF4',
+  },
+  roleRadio: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
     borderColor: '#D1D5DB',
-    justifyContent: 'center',
+    marginRight: 8,
     alignItems: 'center',
-    marginRight: 6,
+    justifyContent: 'center',
   },
-  radioOuterSelected: {
+  roleRadioActive: {
     borderColor: '#22C55E',
   },
-  radioInner: {
+  roleRadioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: '#22C55E',
   },
-  roleText: {
-    fontSize: 14,
-    color: '#333',
+  roleButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  roleButtonTextActive: {
+    color: '#22C55E',
   },
   signUpButton: {
     backgroundColor: '#22C55E',
@@ -473,33 +563,35 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#22C55E',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
   },
   signUpButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   signUpButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 8,
   },
   loginText: {
-    color: '#999',
+    color: '#6B7280',
     fontSize: 14,
+    fontWeight: '400',
   },
   loginLink: {
     color: '#22C55E',
