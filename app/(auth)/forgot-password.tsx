@@ -2,27 +2,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const ForgotPassword = () => {
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [phoneEmail, setPhoneEmail] = useState('');
+  const [phoneEmailError, setPhoneEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Validate email/phone
-  const validateEmail = (text: string): boolean => {
+  // Validate email or phone
+  const validateInput = (text: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^\+?[\d\s\-()]+$/;
+    const phoneRegex = /^[0-9]{10}$/;
     return emailRegex.test(text) || phoneRegex.test(text);
   };
 
@@ -32,16 +32,16 @@ const ForgotPassword = () => {
   // Handle send code
   const handleSendCode = async () => {
     // Reset errors
-    setEmailError('');
+    setPhoneEmailError('');
 
     // Validation
-    if (!email.trim()) {
-      setEmailError('Phone or email is required');
+    if (!phoneEmail.trim()) {
+      setPhoneEmailError('Phone or email is required');
       return;
     }
 
-    if (!validateEmail(email)) {
-      setEmailError('Please enter a valid phone or email');
+    if (!validateInput(phoneEmail)) {
+      setPhoneEmailError('Please enter a valid phone number or email');
       return;
     }
 
@@ -54,13 +54,16 @@ const ForgotPassword = () => {
       // Success - Navigate to OTP verification
       Alert.alert(
         'Code Sent! 📧',
-        `Password reset code has been sent to ${email}`,
+        `A password reset code has been sent to ${phoneEmail}`,
         [
           {
             text: 'OK',
             onPress: () => {
               // Navigate to OTP verification screen
-              router.push('/(auth)/verify-otp');
+              router.push({
+                pathname: '/(auth)/verify-otp',
+                params: { phoneEmail }
+              });
             },
           },
         ]
@@ -86,8 +89,8 @@ const ForgotPassword = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerText}>
-            <Text style={styles.forgotText}>Forgot</Text>
-            <Text style={styles.passwordText}> password</Text>
+            <Text style={styles.forgotText}>Forgot </Text>
+            <Text style={styles.passwordText}>password</Text>
           </Text>
         </View>
 
@@ -95,50 +98,59 @@ const ForgotPassword = () => {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Reset Password</Text>
           <Text style={styles.instructionsText}>
-            Enter your email/Number to receive password reset instructions
+            Enter your phone number or email to receive password reset instructions
           </Text>
         </View>
 
         {/* Phone/Email Input */}
         <View style={styles.inputContainer}>
-          <View style={[styles.inputWrapper, emailError && styles.inputError]}>
+          <View style={[
+            styles.inputWrapper,
+            phoneEmailError && styles.inputError
+          ]}>
             <Ionicons
-              name="phone-portrait-outline"
+              name="mail-outline"
               size={20}
-              color="#999"
+              color={phoneEmailError ? '#EF4444' : '#9CA3AF'}
               style={styles.icon}
             />
             <TextInput
               style={styles.input}
               placeholder="Phone/Email"
-              placeholderTextColor="#999"
-              value={email}
+              placeholderTextColor="#9CA3AF"
+              value={phoneEmail}
               onChangeText={(text) => {
-                setEmail(text);
-                if (emailError) setEmailError('');
+                setPhoneEmail(text);
+                if (phoneEmailError) setPhoneEmailError('');
               }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
+              returnKeyType="done"
+              onSubmitEditing={handleSendCode}
             />
           </View>
-          {emailError ? (
+          {phoneEmailError ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorDot}>•</Text>
-              <Text style={styles.errorText}>{emailError}</Text>
+              <Text style={styles.errorText}>{phoneEmailError}</Text>
             </View>
           ) : null}
         </View>
 
         {/* Send Code Button */}
         <TouchableOpacity
-          style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
+          style={[
+            styles.sendButton,
+            isLoading && styles.sendButtonDisabled
+          ]}
           onPress={handleSendCode}
           disabled={isLoading}
+          activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={styles.sendButtonText}>SEND CODE</Text>
           )}
@@ -149,6 +161,7 @@ const ForgotPassword = () => {
           style={styles.backButton}
           onPress={() => router.back()}
           disabled={isLoading}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="arrow-back" size={20} color="#22C55E" />
           <Text style={styles.backText}>Back to Login</Text>
@@ -161,43 +174,44 @@ const ForgotPassword = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 40,
   },
   header: {
-    marginBottom: 40,
+    marginBottom: 32,
   },
   headerText: {
     fontSize: 32,
     fontWeight: '600',
+    lineHeight: 40,
   },
   forgotText: {
     color: '#22C55E',
   },
   passwordText: {
-    color: '#333',
+    color: '#1F2937',
   },
   instructionsContainer: {
-    marginBottom: 30,
+    marginBottom: 32,
   },
   instructionsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#1F2937',
     marginBottom: 8,
   },
   instructionsText: {
     fontSize: 14,
-    color: '#999',
+    color: '#6B7280',
     lineHeight: 20,
   },
   inputContainer: {
-    marginBottom: 30,
+    marginBottom: 32,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -205,26 +219,27 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E5E7EB',
     borderRadius: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     height: 56,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   inputError: {
     borderColor: '#EF4444',
   },
   icon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: '#1F2937',
+    fontWeight: '400',
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginTop: 8,
-    marginLeft: 15,
+    marginLeft: 16,
   },
   errorDot: {
     color: '#EF4444',
@@ -237,6 +252,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     flex: 1,
+    fontWeight: '400',
   },
   sendButton: {
     backgroundColor: '#22C55E',
@@ -244,30 +260,30 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     shadowColor: '#22C55E',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
   },
   sendButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   sendButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   backButton: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   backText: {
     color: '#22C55E',
