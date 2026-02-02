@@ -1,36 +1,49 @@
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const VerifyOTP = () => {
+  const params = useLocalSearchParams();
+  const phoneEmail = params.phoneEmail as string || '';
+
   const [otp, setOtp] = useState(['', '', '', '']);
   const [otpError, setOtpError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
 
-  // Refs for input fields
-  const inputRefs = [
+  // Refs for OTP inputs
+  const otpRefs = [
     useRef<TextInput>(null),
     useRef<TextInput>(null),
     useRef<TextInput>(null),
     useRef<TextInput>(null),
   ];
 
-  // Valid OTP for testing
-  const VALID_OTP = '1234';
+  // Timer countdown
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => {
+        setResendTimer(resendTimer - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setCanResend(true);
+    }
+  }, [resendTimer]);
 
-  // Simulate API call delay
+  // Simulate API delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Handle OTP input change
@@ -41,39 +54,83 @@ const VerifyOTP = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-    setOtpError(''); // Clear error when user types
+    setOtpError('');
 
     // Auto-focus next input
     if (value && index < 3) {
-      inputRefs[index + 1].current?.focus();
+      otpRefs[index + 1].current?.focus();
+    }
+
+    // Auto-verify when all 4 digits entered
+    if (index === 3 && value) {
+      const fullOtp = [...newOtp.slice(0, 3), value].join('');
+      if (fullOtp.length === 4) {
+        handleVerify();
+      }
     }
   };
 
   // Handle backspace
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs[index - 1].current?.focus();
+      otpRefs[index - 1].current?.focus();
     }
   };
 
-  // Handle verify OTP
-  const handleVerifyOTP = async () => {
-    // Reset error
-    setOtpError('');
-
-    // Check if all fields are filled
-    const otpValue = otp.join('');
+  // Validate OTP
+  const validateOtp = (): boolean => {
+    const fullOtp = otp.join('');
     
-    if (otpValue.length < 4) {
-      setOtpError('Your OTP is incorrect');
-      return;
+    if (fullOtp.length !== 4) {
+      setOtpError('Please enter the complete 4-digit code');
+      return false;
     }
 
-    // Validate OTP
-    if (otpValue !== VALID_OTP) {
-      setOtpError('Your OTP is incorrect');
-      return;
+    return true;
+  };
+
+  // Handle verify
+  const handleVerify = async () => {
+    if (!validateOtp()) return;
+
+    setIsLoading(true);
+
+    try {
+      // Simulate network delay
+      await delay(1000);
+
+      const fullOtp = otp.join('');
+
+      // Validate OTP (for demo, accept any 4-digit code)
+      if (fullOtp.length === 4) {
+        // Success
+        Alert.alert(
+          'Verified! ✅',
+          'Your code has been verified. You can now reset your password.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // In production, navigate to reset password screen
+                router.replace('/(auth)/login');
+              },
+            },
+          ]
+        );
+      } else {
+        setOtpError('Invalid code. Please try again.');
+      }
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      Alert.alert('Error', 'Failed to verify code. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // Handle resend code
+  const handleResend = async () => {
+    if (!canResend) return;
 
     setIsLoading(true);
 
@@ -81,40 +138,19 @@ const VerifyOTP = () => {
       // Simulate network delay
       await delay(800);
 
-      // OTP verified successfully
-      Alert.alert(
-        'Success',
-        'OTP verified successfully! 🎉',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to reset password screen or login
-              router.replace('/(auth)/login');
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('OTP verification error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle resend OTP
-  const handleResendOTP = async () => {
-    setIsLoading(true);
-    try {
-      await delay(1000);
-      Alert.alert('Code Sent', 'A new OTP has been sent to your email/phone');
-      // Clear existing OTP
+      // Reset timer
+      setResendTimer(60);
+      setCanResend(false);
       setOtp(['', '', '', '']);
       setOtpError('');
-      inputRefs[0].current?.focus();
+      
+      // Focus first input
+      otpRefs[0].current?.focus();
+
+      Alert.alert('Code Resent! 📧', `A new code has been sent to ${phoneEmail}`);
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend code');
+      console.error('Resend error:', error);
+      Alert.alert('Error', 'Failed to resend code. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -133,80 +169,96 @@ const VerifyOTP = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerText}>
-            <Text style={styles.otpText}>OTP</Text>
-            <Text style={styles.verificationText}> verification</Text>
+            <Text style={styles.otpText}>OTP </Text>
+            <Text style={styles.verificationText}>verification</Text>
           </Text>
         </View>
 
         {/* Instructions */}
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsText}>Enter the OTP to verify</Text>
+          <Text style={styles.instructionsText}>
+            Enter the OTP to verify
+          </Text>
+          <Text style={styles.phoneEmailText}>
+            Code sent to: {phoneEmail || 'your phone/email'}
+          </Text>
         </View>
 
         {/* OTP Input Boxes */}
         <View style={styles.otpContainer}>
           {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={inputRefs[index]}
-              style={[
-                styles.otpInput,
-                otpError && styles.otpInputError,
-                digit && styles.otpInputFilled,
-              ]}
-              value={digit}
-              onChangeText={(value) => handleOtpChange(value, index)}
-              onKeyPress={(e) => handleKeyPress(e, index)}
-              keyboardType="number-pad"
-              maxLength={1}
-              selectTextOnFocus
-              editable={!isLoading}
-            />
+            <View key={index} style={styles.otpInputWrapper}>
+              <TextInput
+                ref={otpRefs[index]}
+                style={[
+                  styles.otpInput,
+                  otpError && styles.otpInputError,
+                  digit && styles.otpInputFilled
+                ]}
+                value={digit}
+                onChangeText={(value) => handleOtpChange(value, index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                keyboardType="number-pad"
+                maxLength={1}
+                selectTextOnFocus
+                editable={!isLoading}
+                returnKeyType={index === 3 ? 'done' : 'next'}
+              />
+            </View>
           ))}
         </View>
 
         {/* Error Message */}
         {otpError ? (
           <View style={styles.errorContainer}>
+            <Text style={styles.errorDot}>•</Text>
             <Text style={styles.errorText}>{otpError}</Text>
           </View>
         ) : null}
 
+        {/* Resend Timer */}
+        <View style={styles.resendContainer}>
+          {canResend ? (
+            <TouchableOpacity
+              onPress={handleResend}
+              disabled={isLoading}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={styles.resendText}>Resend Code</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.timerText}>
+              Resend code in {resendTimer}s
+            </Text>
+          )}
+        </View>
+
         {/* Verify Button */}
         <TouchableOpacity
-          style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
-          onPress={handleVerifyOTP}
+          style={[
+            styles.verifyButton,
+            isLoading && styles.verifyButtonDisabled
+          ]}
+          onPress={handleVerify}
           disabled={isLoading}
+          activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.verifyButtonText}>VERIFY CODE</Text>
+            <Text style={styles.verifyButtonText}>VERIFY</Text>
           )}
         </TouchableOpacity>
 
-        {/* Resend Code */}
-        <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>Didn't receive code? </Text>
-          <TouchableOpacity onPress={handleResendOTP} disabled={isLoading}>
-            <Text style={styles.resendLink}>Resend</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Back Button */}
+        {/* Back to Login */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
           disabled={isLoading}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="arrow-back" size={20} color="#22C55E" />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>Back to Login</Text>
         </TouchableOpacity>
-
-        {/* Test Info - Remove in production */}
-        <View style={styles.testInfoContainer}>
-          <Text style={styles.testInfoText}>Test OTP: 1234</Text>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -215,64 +267,102 @@ const VerifyOTP = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 40,
   },
   header: {
-    marginBottom: 40,
+    marginBottom: 24,
   },
   headerText: {
     fontSize: 32,
     fontWeight: '600',
+    lineHeight: 40,
   },
   otpText: {
     color: '#22C55E',
   },
   verificationText: {
-    color: '#333',
+    color: '#1F2937',
   },
   instructionsContainer: {
-    marginBottom: 30,
+    marginBottom: 40,
   },
   instructionsText: {
+    fontSize: 16,
+    color: '#1F2937',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  phoneEmailText: {
     fontSize: 14,
-    color: '#999',
+    color: '#6B7280',
+    lineHeight: 20,
   },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
+    gap: 12,
+  },
+  otpInputWrapper: {
+    flex: 1,
   },
   otpInput: {
-    width: 60,
-    height: 60,
+    height: 64,
     borderWidth: 2,
     borderColor: '#E5E7EB',
     borderRadius: 12,
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: '700',
     textAlign: 'center',
-    color: '#333',
-    backgroundColor: '#fff',
+    color: '#1F2937',
+    backgroundColor: '#FFFFFF',
   },
   otpInputError: {
     borderColor: '#EF4444',
   },
   otpInputFilled: {
     borderColor: '#22C55E',
+    backgroundColor: '#F0FDF4',
   },
   errorContainer: {
-    marginBottom: 20,
+    flexDirection: 'row',
     alignItems: 'flex-start',
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+  errorDot: {
+    color: '#EF4444',
+    fontSize: 20,
+    lineHeight: 20,
+    marginRight: 4,
   },
   errorText: {
     color: '#EF4444',
     fontSize: 14,
+    lineHeight: 20,
+    flex: 1,
+    fontWeight: '400',
+  },
+  resendContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+    minHeight: 24,
+  },
+  resendText: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  timerText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '400',
   },
   verifyButton: {
     backgroundColor: '#22C55E',
@@ -280,65 +370,33 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#22C55E',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
   },
   verifyButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   verifyButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 1,
-  },
-  resendContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  resendText: {
-    color: '#999',
-    fontSize: 14,
-  },
-  resendLink: {
-    color: '#22C55E',
-    fontSize: 14,
-    fontWeight: '600',
+    letterSpacing: 1.2,
   },
   backButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   backText: {
-    color: '#22C55E',
+    color: '#6B7280',
     fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  testInfoContainer: {
-    marginTop: 30,
-    padding: 15,
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FCD34D',
-  },
-  testInfoText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#92400E',
-    textAlign: 'center',
+    fontWeight: '500',
   },
 });
 
