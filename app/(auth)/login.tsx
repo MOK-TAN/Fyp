@@ -15,43 +15,47 @@ import {
 } from 'react-native';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [phoneEmail, setPhoneEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [emailError, setEmailError] = useState('');
+  const [phoneEmailError, setPhoneEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Valid credentials
+  // Valid credentials for testing
   const VALID_PHONE = '9803124221';
   const VALID_PASSWORD = '98@moktan';
 
-  // Simulate API call delay
+  // Simulate API delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Validate input
+  const validateInput = (): boolean => {
+    let isValid = true;
+
+    // Reset errors
+    setPhoneEmailError('');
+    setPasswordError('');
+
+    // Check phone/email
+    if (!phoneEmail.trim()) {
+      setPhoneEmailError('Your phone or email is incorrect');
+      isValid = false;
+    }
+
+    // Check password
+    if (!password.trim()) {
+      setPasswordError('Your password is incorrect');
+      isValid = false;
+    }
+
+    return isValid;
+  };
 
   // Handle login
   const handleLogin = async () => {
-    // Reset errors
-    setEmailError('');
-    setPasswordError('');
-
-    // Validation
-    let hasError = false;
-
-    // Check if phone/email is empty
-    if (!email.trim()) {
-      setEmailError('Your phone or email is incorrect');
-      hasError = true;
-    }
-
-    // Check if password is empty
-    if (!password.trim()) {
-      setPasswordError('Your password is incorrect');
-      hasError = true;
-    }
-
-    if (hasError) return;
+    if (!validateInput()) return;
 
     setIsLoading(true);
 
@@ -59,25 +63,24 @@ const Login = () => {
       // Simulate network delay
       await delay(800);
 
-      // Validate phone number
-      if (email !== VALID_PHONE) {
-        setEmailError('Your phone or email is incorrect');
+      // Validate credentials
+      if (phoneEmail !== VALID_PHONE) {
+        setPhoneEmailError('Your phone or email is incorrect');
         setIsLoading(false);
         return;
       }
 
-      // Validate password
       if (password !== VALID_PASSWORD) {
         setPasswordError('Your password is incorrect');
         setIsLoading(false);
         return;
       }
 
-      // Login successful - Navigate directly
+      // Success - Navigate to user tabs
       router.replace('/(user)/(tabs)');
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -85,16 +88,11 @@ const Login = () => {
 
   // Handle forgot password
   const handleForgotPassword = () => {
-    Alert.alert(
-      'Forgot Password',
-      'Please contact support to reset your password.',
-      [{ text: 'OK' }]
-    );
+    router.push('/(auth)/forgot-password');
   };
 
   // Handle sign up
   const handleSignUp = () => {
-    // Navigate to sign up screen
     router.push('/(auth)/signup');
   };
 
@@ -111,58 +109,63 @@ const Login = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerText}>
-            <Text style={styles.loginText}>Login</Text>
-            <Text style={styles.accountText}> your account</Text>
+            <Text style={styles.loginText}>Login </Text>
+            <Text style={styles.accountText}>your account</Text>
           </Text>
         </View>
 
         {/* Phone/Email Input */}
         <View style={styles.inputContainer}>
-          <View style={[styles.inputWrapper, emailError && styles.inputError]}>
+          <View style={[
+            styles.inputWrapper,
+            phoneEmailError && styles.inputError
+          ]}>
             <Ionicons
-              name="phone-portrait-outline"
+              name="call-outline"
               size={20}
-              color="#999"
+              color={phoneEmailError ? '#EF4444' : '#9CA3AF'}
               style={styles.icon}
             />
             <TextInput
               style={styles.input}
               placeholder="Phone/Email"
-              placeholderTextColor="#999"
-              value={email}
+              placeholderTextColor="#9CA3AF"
+              value={phoneEmail}
               onChangeText={(text) => {
-                setEmail(text);
-                if (emailError) setEmailError('');
+                setPhoneEmail(text);
+                if (phoneEmailError) setPhoneEmailError('');
               }}
               keyboardType="phone-pad"
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
+              returnKeyType="next"
             />
           </View>
-          {emailError ? (
+          {phoneEmailError ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorDot}>•</Text>
-              <Text style={styles.errorText}>{emailError}</Text>
+              <Text style={styles.errorText}>{phoneEmailError}</Text>
             </View>
           ) : null}
         </View>
 
         {/* Password Input */}
         <View style={styles.inputContainer}>
-          <View
-            style={[styles.inputWrapper, passwordError && styles.inputError]}
-          >
+          <View style={[
+            styles.inputWrapper,
+            passwordError && styles.inputError
+          ]}>
             <Ionicons
               name="lock-closed-outline"
               size={20}
-              color="#999"
+              color={passwordError ? '#EF4444' : '#9CA3AF'}
               style={styles.icon}
             />
             <TextInput
               style={styles.input}
               placeholder="password"
-              placeholderTextColor="#999"
+              placeholderTextColor="#9CA3AF"
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
@@ -172,16 +175,19 @@ const Login = () => {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
             />
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeIcon}
               disabled={isLoading}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons
                 name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={20}
-                color="#999"
+                color="#9CA3AF"
               />
             </TouchableOpacity>
           </View>
@@ -193,22 +199,12 @@ const Login = () => {
           ) : null}
         </View>
 
-        {/* Remember Me & Forgot Password */}
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity
-            style={styles.rememberMeContainer}
-            onPress={() => setRememberMe(!rememberMe)}
-            disabled={isLoading}
-          >
-            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-              {rememberMe && <Ionicons name="checkmark" size={16} color="#fff" />}
-            </View>
-            <Text style={styles.rememberMeText}>Remember me</Text>
-          </TouchableOpacity>
-
+        {/* Forgot Password Link */}
+        <View style={styles.forgotPasswordContainer}>
           <TouchableOpacity
             onPress={handleForgotPassword}
             disabled={isLoading}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text style={styles.forgotPasswordText}>Forgot password</Text>
           </TouchableOpacity>
@@ -216,21 +212,38 @@ const Login = () => {
 
         {/* Login Button */}
         <TouchableOpacity
-          style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+          style={[
+            styles.loginButton,
+            isLoading && styles.loginButtonDisabled
+          ]}
           onPress={handleLogin}
           disabled={isLoading}
+          activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={styles.loginButtonText}>LOG IN</Text>
           )}
         </TouchableOpacity>
 
+        {/* Back to Login Link */}
+        <TouchableOpacity
+          style={styles.backToLoginButton}
+          onPress={() => router.back()}
+          disabled={isLoading}
+        >
+          <Text style={styles.backToLoginText}>Back to Login</Text>
+        </TouchableOpacity>
+
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Dont have account? </Text>
-          <TouchableOpacity onPress={handleSignUp} disabled={isLoading}>
+          <TouchableOpacity
+            onPress={handleSignUp}
+            disabled={isLoading}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Text style={styles.signUpLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>
@@ -242,26 +255,27 @@ const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center', // ✅ CENTER VERTICALLY
-    paddingHorizontal: 20,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
     paddingVertical: 40,
   },
   header: {
-    marginBottom: 40,
+    marginBottom: 48,
   },
   headerText: {
     fontSize: 32,
     fontWeight: '600',
+    lineHeight: 40,
   },
   loginText: {
     color: '#22C55E',
   },
   accountText: {
-    color: '#333',
+    color: '#1F2937',
   },
   inputContainer: {
     marginBottom: 20,
@@ -270,31 +284,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#22C55E',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     height: 56,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   inputError: {
     borderColor: '#EF4444',
   },
   icon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: '#1F2937',
+    fontWeight: '400',
   },
   eyeIcon: {
-    padding: 5,
+    padding: 4,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginTop: 8,
-    marginLeft: 15,
+    marginLeft: 16,
   },
   errorDot: {
     color: '#EF4444',
@@ -307,34 +322,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     flex: 1,
+    fontWeight: '400',
   },
-  optionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  rememberMeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderColor: '#999',
-    borderRadius: 4,
-    marginRight: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
-  },
-  rememberMeText: {
-    color: '#666',
-    fontSize: 14,
+  forgotPasswordContainer: {
+    alignItems: 'flex-end',
+    marginBottom: 32,
   },
   forgotPasswordText: {
     color: '#22C55E',
@@ -347,33 +339,45 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 16,
     shadowColor: '#22C55E',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
   },
   loginButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   loginButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
+  },
+  backToLoginButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  backToLoginText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
   },
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 8,
   },
   signUpText: {
-    color: '#999',
+    color: '#6B7280',
     fontSize: 14,
+    fontWeight: '400',
   },
   signUpLink: {
     color: '#22C55E',
