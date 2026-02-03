@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Dimensions, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -27,7 +27,37 @@ export default function WelcomeScreen() {
   const slide = slides[index];
 
   return (
+
+    
+
     <View style={styles.container}>
+      
+
+       {/* TEMP TEST BUTTON */}
+
+        <TouchableOpacity
+        style={{
+          flex: 1,
+          backgroundColor: '#22C55E',
+          paddingVertical: 10,
+          borderRadius: 8,
+          alignItems: 'center',
+        }}
+        onPress={() => {
+          router.push({
+            pathname: '/(user)/(tabs)/bookings/confirmation',
+            params: {
+              parkingId: '1',
+              parkingName: 'New Road Parking',
+              pricePerHour: '50',
+            }
+          });
+        }}
+      >
+        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>1.Date</Text>
+      </TouchableOpacity>
+
+
       {/* Swipe Area - Only for Image Section */}
       <Pressable 
         style={styles.imageSwipeArea}
