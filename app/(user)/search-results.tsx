@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import FilterModal from '../../components/FilterModal';
 
@@ -99,7 +99,6 @@ const SearchResults = () => {
   const handleFilterApply = (filters: any) => {
     console.log('Filters applied:', filters);
     // Apply filtering logic here
-    // You can filter PARKING_RESULTS based on filters
   };
 
   return (
@@ -151,6 +150,18 @@ const SearchResults = () => {
             key={parking.id}
             style={styles.parkingCard}
             activeOpacity={0.7}
+            onPress={() => {
+              router.push({
+                pathname: '/(user)/parking-details',
+                params: {
+                  parkingId: parking.id.toString(),
+                  parkingName: parking.name,
+                  parkingAddress: parking.address,
+                  pricePerHour: parking.price.replace('Rs ', ''),
+                  distance: parking.distance,
+                }
+              });
+            }}
           >
             <View style={styles.parkingImageContainer}>
               <View style={styles.parkingImagePlaceholder}>
