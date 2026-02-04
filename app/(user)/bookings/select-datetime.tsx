@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export default function SelectDateTime() {
@@ -17,6 +17,7 @@ export default function SelectDateTime() {
   const parkingId = params.parkingId as string;
   const parkingName = params.parkingName as string || 'Parking Spot';
   const pricePerHour = params.pricePerHour as string || '50';
+  const slotId = params.slotId as string || 'A1'; // NEW - Selected slot
 
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -29,7 +30,6 @@ export default function SelectDateTime() {
   const calculateDuration = () => {
     if (!startTime || !endTime) return 0;
     
-    // Simple duration calc (you can enhance this)
     const [startHour] = startTime.split(':').map(Number);
     const [endHour] = endTime.split(':').map(Number);
     
@@ -84,19 +84,20 @@ export default function SelectDateTime() {
   const handleContinue = () => {
     if (!validateInputs()) return;
 
-    // router.push({
-    //   pathname: '/(user)/booking/select-vehicle',
-    //   params: {
-    //     parkingId,
-    //     parkingName,
-    //     pricePerHour,
-    //     date,
-    //     startTime,
-    //     endTime,
-    //     duration: duration.toString(),
-    //     totalPrice: totalPrice.toString(),
-    //   },
-    // });
+    router.push({
+      pathname: '/(user)/bookings/select-vehicle',
+      params: {
+        parkingId,
+        parkingName,
+        pricePerHour,
+        slotId, // Pass slot to next screen
+        date,
+        startTime,
+        endTime,
+        duration: duration.toString(),
+        totalPrice: totalPrice.toString(),
+      },
+    });
   };
 
   return (
@@ -122,6 +123,23 @@ export default function SelectDateTime() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* NEW - Selected Slot Display */}
+        <View style={styles.slotCard}>
+          <View style={styles.slotIconContainer}>
+            <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
+          </View>
+          <View style={styles.slotInfo}>
+            <Text style={styles.slotLabel}>Selected Slot</Text>
+            <Text style={styles.slotValue}>{slotId}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.changeButton}
+          >
+            <Text style={styles.changeText}>Change</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Parking Info */}
         <View style={styles.infoCard}>
           <Text style={styles.parkingName}>{parkingName}</Text>
@@ -138,7 +156,7 @@ export default function SelectDateTime() {
             <Ionicons name="calendar-outline" size={20} color="#999" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="DD/MM/YYYY"
+              placeholder="DD/MM/YYYY (e.g., 05/02/2026)"
               placeholderTextColor="#999"
               value={date}
               onChangeText={(text) => {
@@ -271,6 +289,44 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
+  },
+  // NEW - Slot Card Styles
+  slotCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#22C55E',
+  },
+  slotIconContainer: {
+    marginRight: 12,
+  },
+  slotInfo: {
+    flex: 1,
+  },
+  slotLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  slotValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#22C55E',
+  },
+  changeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  changeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#22C55E',
   },
   infoCard: {
     backgroundColor: '#fff',
