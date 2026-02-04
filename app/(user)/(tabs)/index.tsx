@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -72,6 +72,35 @@ const PARKING_SPOTS = [
 const UserDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilter, setShowFilter] = useState(false);
+  
+  // Active booking state (demo - in real app, fetch from database)
+  const [hasActiveBooking, setHasActiveBooking] = useState(true);
+  const [activeBookingTime, setActiveBookingTime] = useState(5400); // 1.5 hours in seconds
+  const [activeParkingName] = useState('New Road Parking');
+  const [activeVehicle] = useState('BA 12 PA 3456');
+
+  // Timer countdown
+  useEffect(() => {
+    if (hasActiveBooking && activeBookingTime > 0) {
+      const timer = setInterval(() => {
+        setActiveBookingTime(prev => {
+          if (prev <= 0) {
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [hasActiveBooking, activeBookingTime]);
+
+  // Format time as HH:MM:SS
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   // Filter parking spots based on search
   const filteredSpots = PARKING_SPOTS.filter((spot) =>
@@ -82,7 +111,6 @@ const UserDashboard = () => {
   // Handle filter apply
   const handleFilterApply = (filters: any) => {
     console.log('Filters applied:', filters);
-    // Apply filtering logic here
   };
 
   return (
@@ -95,7 +123,7 @@ const UserDashboard = () => {
           </View>
           <View>
             <Text style={styles.greeting}>Good morning, Acharya</Text>
-            <Text style={styles.location}>naxal,kathmandu</Text>
+            <Text style={styles.location}>naxal, kathmandu</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
@@ -103,46 +131,85 @@ const UserDashboard = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TouchableOpacity 
-          style={styles.searchBar}
-          onPress={() => router.push('/(user)/search')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="search-outline" size={20} color="#999" />
-          <Text style={styles.searchPlaceholder}>Search for parking</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.filterButton}
-          onPress={() => setShowFilter(true)}
-        >
-          <Ionicons name="options-outline" size={20} color="#22C55E" />
-        </TouchableOpacity>
-      </View>
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Active Parking Card - NEW */}
+        {hasActiveBooking && (
+          <View style={styles.activeParkingContainer}>
+            <TouchableOpacity
+              style={styles.activeCard}
+              onPress={() => router.push('/(user)/(tabs)/active-timer')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.activeCardTop}>
+                <View style={styles.activeCardLeft}>
+                  <View style={styles.activeIconContainer}>
+                    <Ionicons name="time" size={28} color="#22C55E" />
+                  </View>
+                  <View>
+                    <Text style={styles.activeLabel}>Active Parking</Text>
+                    <Text style={styles.activeParkingNameText}>{activeParkingName}</Text>
+                    <Text style={styles.activeVehicleText}>{activeVehicle}</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color="#22C55E" />
+              </View>
+              
+              <View style={styles.timerContainer}>
+                <Ionicons name="timer-outline" size={20} color="#22C55E" />
+                <Text style={styles.timerText}>{formatTime(activeBookingTime)}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {/* Map View */}
-      <View style={styles.mapContainer}>
-        <Image
-          source={require('../../../assets/images/map.png')}
-          style={styles.map}
-          resizeMode="cover"
-        />
-      </View>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <TouchableOpacity 
+            style={styles.searchBar}
+            onPress={() => router.push('/(user)/search')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="search-outline" size={20} color="#999" />
+            <Text style={styles.searchPlaceholder}>Search for parking</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.filterButton}
+            onPress={() => setShowFilter(true)}
+          >
+            <Ionicons name="options-outline" size={20} color="#22C55E" />
+          </TouchableOpacity>
+        </View>
 
-      {/* Parking Nearby Section */}
-      <View style={styles.parkingSection}>
-        <Text style={styles.sectionTitle}>Parking Nearby</Text>
-        
-        <ScrollView
-          horizontal={false}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.parkingList}
-        >
+        {/* Map View */}
+        <View style={styles.mapContainer}>
+          <Image
+            source={require('../../../assets/images/map.png')}
+            style={styles.map}
+            resizeMode="cover"
+          />
+        </View>
+
+        {/* Parking Nearby Section */}
+        <View style={styles.parkingSection}>
+          <Text style={styles.sectionTitle}>Parking Nearby</Text>
+          
           {filteredSpots.map((spot) => (
             <TouchableOpacity
               key={spot.id}
               style={styles.parkingCard}
+              onPress={() => {
+                router.push({
+                  pathname: '/(user)/bookings/select-datetime',
+                  params: {
+                    parkingId: spot.id.toString(),
+                    parkingName: spot.name,
+                    pricePerHour: spot.price.replace('Rs ', ''),
+                  }
+                });
+              }}
               activeOpacity={0.7}
             >
               <View style={styles.parkingImageContainer}>
@@ -165,10 +232,8 @@ const UserDashboard = () => {
               </View>
             </TouchableOpacity>
           ))}
-        </ScrollView>
-      </View>
-
-      {/* Bottom Navigation - Will be in _layout.tsx */}
+        </View>
+      </ScrollView>
 
       {/* Filter Modal */}
       <FilterModal
@@ -230,6 +295,78 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  scrollView: {
+    flex: 1,
+  },
+  // NEW - Active Parking Card Styles
+  activeParkingContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    backgroundColor: '#fff',
+  },
+  activeCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#22C55E',
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 15,
+  },
+  activeCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  activeCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  activeIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activeLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  activeParkingNameText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 2,
+  },
+  activeVehicleText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 10,
+    justifyContent: 'center',
+  },
+  timerText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#22C55E',
+    marginLeft: 8,
+    letterSpacing: 1,
+  },
   searchContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -262,7 +399,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mapContainer: {
-    height: height * 0.35,
+    height: height * 0.3,
     backgroundColor: '#E5E7EB',
     position: 'relative',
   },
@@ -278,6 +415,7 @@ const styles = StyleSheet.create({
     marginTop: -20,
     paddingTop: 20,
     paddingHorizontal: 20,
+    paddingBottom: 100,
   },
   sectionTitle: {
     fontSize: 18,
@@ -285,12 +423,9 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
-  parkingList: {
-    paddingBottom: 20,
-  },
   parkingCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)', // Semi-transparent white
+    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -303,7 +438,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#E5E7EB',
   },
   parkingImageContainer: {
     marginRight: 12,
