@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type Vehicle = {
@@ -19,6 +19,8 @@ type Vehicle = {
   model: string;
   isDefault: boolean;
 };
+
+
 
 // Dummy vehicle data
 const DUMMY_VEHICLES: Vehicle[] = [
@@ -53,6 +55,8 @@ const DUMMY_VEHICLES: Vehicle[] = [
 
 export default function SelectVehicle() {
   const params = useLocalSearchParams();
+
+  const slotId = params.slotId as string || 'A1';  // ← ADD THIS LINE
   
   const parkingId = params.parkingId as string;
   const parkingName = params.parkingName as string;
@@ -80,32 +84,71 @@ export default function SelectVehicle() {
   };
 
   // Handle continue
-  const handleContinue = () => {
-    if (!selectedVehicleId) {
-      Alert.alert('Error', 'Please select a vehicle');
-      return;
-    }
+//   const handleContinue = () => {
+//     if (!selectedVehicleId) {
+//       Alert.alert('Error', 'Please select a vehicle');
+//       return;
+//     }
 
-    const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+//     const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
 
-    // router.push({
-    //   pathname: '/(user)/booking/review-booking',
-    //   params: {
-    //     parkingId,
-    //     parkingName,
-    //     pricePerHour,
-    //     date,
-    //     startTime,
-    //     endTime,
-    //     duration,
-    //     totalPrice,
-    //     vehicleId: selectedVehicleId,
-    //     vehiclePlate: selectedVehicle?.licensePlate,
-    //     vehicleType: selectedVehicle?.type,
-    //     vehicleModel: `${selectedVehicle?.make} ${selectedVehicle?.model}`,
-    //   },
-    // });
-  };
+//     router.push({
+//   pathname: '/(user)/bookings/review-booking',
+//   params: {
+//     parkingId,
+//     parkingName,
+//     pricePerHour,
+//     slotId,  // ← ADD THIS LINE
+//     date,
+//     startTime,
+//     endTime,
+//     duration,
+//     totalPrice,
+//     vehicleId: selectedVehicle,
+//     vehiclePlate: selectedVehicleData?.plate,
+//     vehicleType: selectedVehicleData?.type,
+//     vehicleModel: selectedVehicleData?.model,
+//   }
+// });
+//   };
+
+const handleContinue = () => {
+  if (!selectedVehicleId) {
+    Alert.alert('Error', 'Please select a vehicle');
+    return;
+  }
+
+  const selectedVehicle = vehicles.find(
+    v => v.id === selectedVehicleId
+  );
+
+  if (!selectedVehicle) {
+    Alert.alert('Error', 'Selected vehicle not found');
+    return;
+  }
+
+  router.push({
+    pathname: '/(user)/bookings/review-booking',
+    params: {
+      parkingId,
+      parkingName,
+      pricePerHour,
+      slotId,
+      date,
+      startTime,
+      endTime,
+      duration,
+      totalPrice,
+
+      // ✅ vehicle data (PRIMITIVES ONLY)
+      vehicleId: selectedVehicle.id,
+      vehiclePlate: selectedVehicle.licensePlate,
+      vehicleType: selectedVehicle.type,
+      vehicleModel: selectedVehicle.model,
+    },
+  });
+};
+
 
   // Handle add vehicle
   const handleAddVehicle = () => {

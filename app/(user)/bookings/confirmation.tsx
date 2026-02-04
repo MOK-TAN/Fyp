@@ -2,56 +2,51 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
-export default function BookingConfirmation() {
+export default function Confirmation() {
   const params = useLocalSearchParams();
   
-  const bookingReference = params.bookingReference as string || `PK${Date.now()}`;
   const parkingName = params.parkingName as string || 'Parking Spot';
-  const date = params.date as string || '03/02/2026';
-  const startTime = params.startTime as string || '10:00';
-  const endTime = params.endTime as string || '12:00';
-  const duration = params.duration as string || '2';
-  const totalPrice = params.totalPrice as string || '105';
-  const vehiclePlate = params.vehiclePlate as string || 'BA 12 PA 3456';
+  const slotId = params.slotId as string || 'A1';
+  const date = params.date as string || '';
+  const startTime = params.startTime as string || '';
+  const endTime = params.endTime as string || '';
+  const vehiclePlate = params.vehiclePlate as string || '';
+  const vehicleModel = params.vehicleModel as string || '';
+  const totalPrice = params.totalPrice as string || '0';
+  const bookingReference = params.bookingReference as string || 'PK00000000';
   const paymentMethod = params.paymentMethod as string || 'cash';
 
   const [showSuccess, setShowSuccess] = useState(true);
+  const scaleAnim = new Animated.Value(0);
 
   useEffect(() => {
-    // Hide success animation after 2 seconds
+    // Success animation
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 50,
+      friction: 7,
+      useNativeDriver: true,
+    }).start();
+
+    // Hide success overlay after 2 seconds
     const timer = setTimeout(() => {
       setShowSuccess(false);
     }, 2000);
+
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle download QR
-  const handleDownloadQR = () => {
-    Alert.alert('Download QR', 'QR code saved to gallery!');
-  };
-
-  // Handle share
-  const handleShare = () => {
-    Alert.alert('Share', 'Sharing booking details...');
-  };
-
-  // Handle done
-  const handleDone = () => {
-    router.replace('/(user)/(tabs)');
-  };
-
-  // Get payment method display
-  const getPaymentMethodDisplay = () => {
-    switch (paymentMethod) {
+  const getPaymentMethodName = (method: string) => {
+    switch (method) {
       case 'esewa': return 'eSewa';
       case 'khalti': return 'Khalti';
       case 'cash': return 'Cash';
@@ -59,18 +54,24 @@ export default function BookingConfirmation() {
     }
   };
 
+  const handleDone = () => {
+    router.replace('/(user)/(tabs)');
+  };
+
   return (
     <View style={styles.container}>
-      {/* Success Animation Overlay */}
+      {/* Success Overlay */}
       {showSuccess && (
         <View style={styles.successOverlay}>
-          <View style={styles.successCard}>
+          <Animated.View style={[
+            styles.successContent,
+            { transform: [{ scale: scaleAnim }] }
+          ]}>
             <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={80} color="#22C55E" />
+              <Ionicons name="checkmark" size={64} color="#fff" />
             </View>
-            <Text style={styles.successTitle}>Booking Confirmed!</Text>
-            <Text style={styles.successMessage}>Your parking has been booked successfully</Text>
-          </View>
+            <Text style={styles.successText}>Booking Confirmed!</Text>
+          </Animated.View>
         </View>
       )}
 
@@ -91,26 +92,24 @@ export default function BookingConfirmation() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Success Icon */}
-        <View style={styles.iconContainer}>
-          <View style={styles.successBadge}>
+        {/* Success Badge */}
+        <View style={styles.successBadge}>
+          <View style={styles.successBadgeIcon}>
             <Ionicons name="checkmark" size={40} color="#fff" />
           </View>
         </View>
 
-        {/* QR Code */}
-        <View style={styles.qrContainer}>
-          <View style={styles.qrCard}>
-            <Text style={styles.qrTitle}>Show this QR at entry</Text>
-            <View style={styles.qrCodeWrapper}>
-              <QRCode
-                value={bookingReference}
-                size={200}
-                backgroundColor="white"
-              />
-            </View>
-            <Text style={styles.qrReference}>{bookingReference}</Text>
+        {/* QR Code Card */}
+        <View style={styles.qrCard}>
+          <Text style={styles.qrTitle}>Your Parking QR Code</Text>
+          <View style={styles.qrCodeWrapper}>
+            <QRCode
+              value={bookingReference}
+              size={200}
+              backgroundColor="white"
+            />
           </View>
+          <Text style={styles.qrReference}>{bookingReference}</Text>
         </View>
 
         {/* Booking Details */}
@@ -118,93 +117,98 @@ export default function BookingConfirmation() {
           <Text style={styles.cardTitle}>Booking Details</Text>
 
           <View style={styles.detailRow}>
-            <View style={styles.detailIcon}>
-              <Ionicons name="location" size={20} color="#22C55E" />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Parking Location</Text>
-              <Text style={styles.detailValue}>{parkingName}</Text>
-            </View>
+            <Text style={styles.detailLabel}>Parking Location</Text>
+            <Text style={styles.detailValue}>{parkingName}</Text>
           </View>
 
-          <View style={styles.detailRow}>
-            <View style={styles.detailIcon}>
-              <Ionicons name="calendar" size={20} color="#22C55E" />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Date</Text>
-              <Text style={styles.detailValue}>{date}</Text>
-            </View>
-          </View>
+          <View style={styles.divider} />
 
+          {/* Slot Display */}
           <View style={styles.detailRow}>
-            <View style={styles.detailIcon}>
-              <Ionicons name="time" size={20} color="#22C55E" />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Time</Text>
-              <Text style={styles.detailValue}>{startTime} - {endTime}</Text>
-            </View>
-          </View>
-
-          <View style={styles.detailRow}>
-            <View style={styles.detailIcon}>
-              <Ionicons name="car" size={20} color="#22C55E" />
-            </View>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Vehicle</Text>
-              <Text style={styles.detailValue}>{vehiclePlate}</Text>
+            <Text style={styles.detailLabel}>Parking Slot</Text>
+            <View style={styles.slotBadge}>
+              <Text style={styles.slotBadgeText}>{slotId}</Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Total Paid</Text>
-            <Text style={styles.priceValue}>Rs {totalPrice}</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Date</Text>
+            <Text style={styles.detailValue}>{date}</Text>
           </View>
 
-          <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Payment Method</Text>
-            <Text style={styles.paymentValue}>{getPaymentMethodDisplay()}</Text>
+          <View style={styles.divider} />
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Time</Text>
+            <Text style={styles.detailValue}>{startTime} - {endTime}</Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Vehicle</Text>
+            <View>
+              <Text style={styles.detailValue}>{vehiclePlate}</Text>
+              <Text style={styles.detailSubValue}>{vehicleModel}</Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Total Paid</Text>
+            <Text style={styles.detailValuePrice}>Rs {totalPrice}</Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Payment Method</Text>
+            <Text style={styles.detailValue}>{getPaymentMethodName(paymentMethod)}</Text>
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleDownloadQR}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
             <Ionicons name="download-outline" size={20} color="#22C55E" />
             <Text style={styles.actionText}>Download QR</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleShare}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="share-outline" size={20} color="#22C55E" />
+          <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
+            <Ionicons name="share-social-outline" size={20} color="#22C55E" />
             <Text style={styles.actionText}>Share</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Important Notes */}
-        <View style={styles.notesCard}>
-          <Text style={styles.notesTitle}>Important Information</Text>
-          <View style={styles.noteItem}>
-            <Ionicons name="information-circle-outline" size={18} color="#6B7280" />
-            <Text style={styles.noteText}>Show QR code at parking entrance</Text>
+        {/* Important Information */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoHeader}>
+            <Ionicons name="information-circle" size={24} color="#F59E0B" />
+            <Text style={styles.infoTitle}>Important Information</Text>
           </View>
-          <View style={styles.noteItem}>
-            <Ionicons name="time-outline" size={18} color="#6B7280" />
-            <Text style={styles.noteText}>Arrive within 15 minutes of start time</Text>
+
+          <View style={styles.infoItem}>
+            <Ionicons name="qr-code" size={18} color="#6B7280" />
+            <Text style={styles.infoText}>
+              Show this QR code at the entrance to access your parking slot
+            </Text>
           </View>
-          <View style={styles.noteItem}>
-            <Ionicons name="shield-checkmark-outline" size={18} color="#6B7280" />
-            <Text style={styles.noteText}>Keep QR code safe until exit</Text>
+
+          <View style={styles.infoItem}>
+            <Ionicons name="time" size={18} color="#6B7280" />
+            <Text style={styles.infoText}>
+              Please arrive on time. Late arrivals may result in slot reassignment
+            </Text>
+          </View>
+
+          <View style={styles.infoItem}>
+            <Ionicons name="shield-checkmark" size={18} color="#6B7280" />
+            <Text style={styles.infoText}>
+              Keep your QR code safe and do not share it with others
+            </Text>
           </View>
         </View>
 
@@ -237,30 +241,26 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 999,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
   },
-  successCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 32,
+  successContent: {
     alignItems: 'center',
-    width: '80%',
   },
   successIconContainer: {
-    marginBottom: 16,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#22C55E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  successTitle: {
+  successText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  successMessage: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -273,45 +273,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  closeButton: {
-    padding: 4,
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#333',
   },
+  closeButton: {
+    padding: 4,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 20,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
+    paddingTop: 20,
   },
   successBadge: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  successBadgeIcon: {
     width: 80,
     height: 80,
     borderRadius: 40,
     backgroundColor: '#22C55E',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#22C55E',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
-  qrContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
   qrCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    width: '100%',
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -322,7 +319,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   qrCodeWrapper: {
     padding: 16,
@@ -340,7 +337,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -355,70 +352,53 @@ const styles = StyleSheet.create({
   },
   detailRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  detailIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#F0FDF4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  detailContent: {
-    flex: 1,
+    paddingVertical: 10,
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#6B7280',
-    marginBottom: 2,
   },
   detailValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
+    textAlign: 'right',
+  },
+  detailSubValue: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  detailValuePrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#22C55E',
+  },
+  slotBadge: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#22C55E',
+  },
+  slotBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#22C55E',
   },
   divider: {
     height: 1,
     backgroundColor: '#E5E7EB',
-    marginVertical: 12,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  priceLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-  },
-  priceValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#22C55E',
-  },
-  paymentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  paymentLabel: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  paymentValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
+    marginVertical: 8,
   },
   actionsContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   actionButton: {
     flex: 1,
@@ -428,7 +408,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#22C55E',
   },
   actionText: {
@@ -437,27 +417,32 @@ const styles = StyleSheet.create({
     color: '#22C55E',
     marginLeft: 8,
   },
-  notesCard: {
+  infoCard: {
     backgroundColor: '#FEF3C7',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  notesTitle: {
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 12,
+    marginLeft: 8,
   },
-  noteItem: {
+  infoItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  noteText: {
+  infoText: {
     fontSize: 13,
     color: '#6B7280',
-    marginLeft: 8,
+    marginLeft: 12,
     flex: 1,
     lineHeight: 18,
   },

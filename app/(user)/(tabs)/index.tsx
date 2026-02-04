@@ -135,6 +135,26 @@ const UserDashboard = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
+        
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <TouchableOpacity 
+            style={styles.searchBar}
+            onPress={() => router.push('/(user)/search')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="search-outline" size={20} color="#999" />
+            <Text style={styles.searchPlaceholder}>Search for parking</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.filterButton}
+            onPress={() => setShowFilter(true)}
+          >
+            <Ionicons name="options-outline" size={20} color="#22C55E" />
+          </TouchableOpacity>
+        </View>
+
         {/* Active Parking Card - NEW */}
         {hasActiveBooking && (
           <View style={styles.activeParkingContainer}>
@@ -164,24 +184,6 @@ const UserDashboard = () => {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <TouchableOpacity 
-            style={styles.searchBar}
-            onPress={() => router.push('/(user)/search')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="search-outline" size={20} color="#999" />
-            <Text style={styles.searchPlaceholder}>Search for parking</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.filterButton}
-            onPress={() => setShowFilter(true)}
-          >
-            <Ionicons name="options-outline" size={20} color="#22C55E" />
-          </TouchableOpacity>
-        </View>
 
         {/* Map View */}
         <View style={styles.mapContainer}>

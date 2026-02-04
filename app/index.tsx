@@ -45,7 +45,7 @@ export default function WelcomeScreen() {
         }}
         onPress={() => {
           router.push({
-            pathname: '/(user)/(tabs)/bookings/confirmation',
+            pathname: '/(user)/bookings/review-booking',
             params: {
               parkingId: '1',
               parkingName: 'New Road Parking',

@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -78,14 +78,14 @@ export default function ActiveParking() {
           style: 'destructive',
           onPress: () => {
             // Navigate to review screen
-            // router.push({
-            //   pathname: '/(user)/reviews/submit-review',
-            //   params: {
-            //     parkingId: '1',
-            //     parkingName: parkingName,
-            //     bookingId: bookingReference,
-            //   }
-            // });
+            router.push({
+              pathname: '/(user)/reviews/submit-review',
+              params: {
+                parkingId: '1',
+                parkingName: parkingName,
+                bookingId: bookingReference,
+              }
+            });
           },
         },
       ]

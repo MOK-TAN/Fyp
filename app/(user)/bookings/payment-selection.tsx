@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type PaymentMethod = 'esewa' | 'khalti' | 'cash';
@@ -17,25 +17,37 @@ export default function PaymentSelection() {
   
   const parkingId = params.parkingId as string;
   const parkingName = params.parkingName as string || 'Parking Spot';
-  const date = params.date as string || '03/02/2026';
-  const startTime = params.startTime as string || '10:00';
-  const endTime = params.endTime as string || '12:00';
-  const duration = params.duration as string || '2';
-  const totalPrice = params.totalPrice as string || '105';
-  const basePrice = params.basePrice as string || '100';
-  const serviceFee = params.serviceFee as string || '5';
-  const vehicleId = params.vehicleId as string || '1';
-  const vehiclePlate = params.vehiclePlate as string || 'BA 12 PA 3456';
-  const vehicleType = params.vehicleType as string || 'car';
-  const vehicleModel = params.vehicleModel as string || 'Toyota Corolla';
+  const pricePerHour = params.pricePerHour as string || '50';
+  const slotId = params.slotId as string || 'A1';
+  const date = params.date as string || '';
+  const startTime = params.startTime as string || '';
+  const endTime = params.endTime as string || '';
+  const duration = params.duration as string || '0';
+  const vehicleId = params.vehicleId as string || '';
+  const vehiclePlate = params.vehiclePlate as string || '';
+  const vehicleType = params.vehicleType as string || '';
+  const vehicleModel = params.vehicleModel as string || '';
+  const basePrice = params.basePrice as string || '0';
+  const serviceFee = params.serviceFee as string || '0';
+  const totalPrice = params.totalPrice as string || '0';
 
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Generate booking reference
+  const generateBookingReference = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `PK${year}${month}${day}${random}`;
+  };
+
   // Handle payment
   const handlePayment = async () => {
     if (!selectedPayment) {
-      Alert.alert('Payment Method Required', 'Please select a payment method to continue');
+      alert('Please select a payment method');
       return;
     }
 
@@ -45,24 +57,30 @@ export default function PaymentSelection() {
     setTimeout(() => {
       setIsProcessing(false);
       
-      // Navigate to confirmation
-    //   router.replace({
-    //     pathname: '/(user)/booking/confirmation',
-    //     params: {
-    //       bookingReference: `PK${Date.now()}`,
-    //       parkingId,
-    //       parkingName,
-    //       date,
-    //       startTime,
-    //       endTime,
-    //       duration,
-    //       totalPrice,
-    //       vehiclePlate,
-    //       vehicleType,
-    //       vehicleModel,
-    //       paymentMethod: selectedPayment,
-    //     },
-    //   });
+      const bookingReference = generateBookingReference();
+
+      router.push({
+        pathname: '/(user)/bookings/confirmation',
+        params: {
+          parkingId,
+          parkingName,
+          pricePerHour,
+          slotId,
+          date,
+          startTime,
+          endTime,
+          duration,
+          vehicleId,
+          vehiclePlate,
+          vehicleType,
+          vehicleModel,
+          basePrice,
+          serviceFee,
+          totalPrice,
+          bookingReference,
+          paymentMethod: selectedPayment,
+        }
+      });
     }, 1500);
   };
 
@@ -74,11 +92,10 @@ export default function PaymentSelection() {
           onPress={() => router.back()}
           style={styles.backButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          disabled={isProcessing}
         >
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment</Text>
+        <Text style={styles.headerTitle}>Payment Method</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -88,17 +105,12 @@ export default function PaymentSelection() {
       >
         {/* Amount Card */}
         <View style={styles.amountCard}>
-          <Text style={styles.amountLabel}>Total Amount to Pay</Text>
+          <Text style={styles.amountLabel}>Total Amount</Text>
           <Text style={styles.amountValue}>Rs {totalPrice}</Text>
-          <View style={styles.amountBreakdown}>
-            <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Base Price</Text>
-              <Text style={styles.breakdownValue}>Rs {basePrice}</Text>
-            </View>
-            <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Service Fee</Text>
-              <Text style={styles.breakdownValue}>Rs {serviceFee}</Text>
-            </View>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownText}>Base: Rs {basePrice}</Text>
+            <Text style={styles.breakdownDot}>•</Text>
+            <Text style={styles.breakdownText}>Fee: Rs {serviceFee}</Text>
           </View>
         </View>
 
@@ -112,7 +124,6 @@ export default function PaymentSelection() {
             selectedPayment === 'esewa' && styles.paymentCardSelected
           ]}
           onPress={() => setSelectedPayment('esewa')}
-          disabled={isProcessing}
           activeOpacity={0.7}
         >
           <View style={styles.radioContainer}>
@@ -126,16 +137,13 @@ export default function PaymentSelection() {
             </View>
           </View>
 
-          <View style={[
-            styles.paymentIcon,
-            selectedPayment === 'esewa' && styles.paymentIconSelected
-          ]}>
-            <Text style={styles.paymentIconText}>eSewa</Text>
+          <View style={[styles.paymentIcon, { backgroundColor: '#D1FAE5' }]}>
+            <Ionicons name="wallet" size={28} color="#22C55E" />
           </View>
 
           <View style={styles.paymentInfo}>
             <Text style={styles.paymentName}>eSewa</Text>
-            <Text style={styles.paymentDescription}>Digital wallet payment</Text>
+            <Text style={styles.paymentDesc}>Pay with eSewa digital wallet</Text>
           </View>
 
           <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
@@ -148,7 +156,6 @@ export default function PaymentSelection() {
             selectedPayment === 'khalti' && styles.paymentCardSelected
           ]}
           onPress={() => setSelectedPayment('khalti')}
-          disabled={isProcessing}
           activeOpacity={0.7}
         >
           <View style={styles.radioContainer}>
@@ -162,17 +169,13 @@ export default function PaymentSelection() {
             </View>
           </View>
 
-          <View style={[
-            styles.paymentIcon,
-            styles.paymentIconKhalti,
-            selectedPayment === 'khalti' && styles.paymentIconSelected
-          ]}>
-            <Text style={[styles.paymentIconText, { color: '#5C2D91' }]}>Khalti</Text>
+          <View style={[styles.paymentIcon, { backgroundColor: '#EDE9FE' }]}>
+            <Ionicons name="card" size={28} color="#7C3AED" />
           </View>
 
           <View style={styles.paymentInfo}>
             <Text style={styles.paymentName}>Khalti</Text>
-            <Text style={styles.paymentDescription}>Digital wallet payment</Text>
+            <Text style={styles.paymentDesc}>Pay with Khalti digital wallet</Text>
           </View>
 
           <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
@@ -185,7 +188,6 @@ export default function PaymentSelection() {
             selectedPayment === 'cash' && styles.paymentCardSelected
           ]}
           onPress={() => setSelectedPayment('cash')}
-          disabled={isProcessing}
           activeOpacity={0.7}
         >
           <View style={styles.radioContainer}>
@@ -199,28 +201,24 @@ export default function PaymentSelection() {
             </View>
           </View>
 
-          <View style={[
-            styles.paymentIcon,
-            styles.paymentIconCash,
-            selectedPayment === 'cash' && styles.paymentIconSelected
-          ]}>
-            <Ionicons name="cash-outline" size={28} color="#F59E0B" />
+          <View style={[styles.paymentIcon, { backgroundColor: '#FED7AA' }]}>
+            <Ionicons name="cash" size={28} color="#EA580C" />
           </View>
 
           <View style={styles.paymentInfo}>
             <Text style={styles.paymentName}>Cash</Text>
-            <Text style={styles.paymentDescription}>Pay at parking location</Text>
+            <Text style={styles.paymentDesc}>Pay at parking location</Text>
           </View>
 
           <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
         </TouchableOpacity>
 
-        {/* Payment Info */}
-        <View style={styles.infoCard}>
+        {/* Secure Payment Info */}
+        <View style={styles.secureCard}>
           <Ionicons name="shield-checkmark" size={24} color="#22C55E" />
-          <View style={styles.infoTextContainer}>
-            <Text style={styles.infoTitle}>Secure Payment</Text>
-            <Text style={styles.infoText}>
+          <View style={styles.secureInfo}>
+            <Text style={styles.secureTitle}>Secure Payment</Text>
+            <Text style={styles.secureText}>
               Your payment information is encrypted and secure
             </Text>
           </View>
@@ -241,13 +239,11 @@ export default function PaymentSelection() {
           activeOpacity={0.8}
         >
           {isProcessing ? (
-            <Text style={styles.payButtonText}>Processing...</Text>
+            <ActivityIndicator size="small" color="#fff" />
           ) : (
             <>
-              <Text style={styles.payButtonText}>
-                Pay Rs {totalPrice}
-              </Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
+              <Text style={styles.payButtonText}>Pay Rs {totalPrice}</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
             </>
           )}
         </TouchableOpacity>
@@ -290,6 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     marginBottom: 24,
+    alignItems: 'center',
     shadowColor: '#22C55E',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -298,34 +295,30 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 14,
-    color: '#F0FDF4',
+    color: '#fff',
+    opacity: 0.9,
     marginBottom: 8,
-    fontWeight: '500',
   },
   amountValue: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 16,
-  },
-  amountBreakdown: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.3)',
-    paddingTop: 12,
+    marginBottom: 8,
   },
   breakdownRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
+    alignItems: 'center',
   },
-  breakdownLabel: {
-    fontSize: 13,
-    color: '#F0FDF4',
-  },
-  breakdownValue: {
+  breakdownText: {
     fontSize: 13,
     color: '#fff',
-    fontWeight: '600',
+    opacity: 0.9,
+  },
+  breakdownDot: {
+    fontSize: 13,
+    color: '#fff',
+    opacity: 0.9,
+    marginHorizontal: 8,
   },
   sectionTitle: {
     fontSize: 16,
@@ -342,11 +335,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 2,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   paymentCardSelected: {
     borderColor: '#22C55E',
@@ -361,8 +349,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#D1D5DB',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   radioOuterSelected: {
     borderColor: '#22C55E',
@@ -377,24 +365,9 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#DCFCE7',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
-  },
-  paymentIconSelected: {
-    backgroundColor: '#F0FDF4',
-  },
-  paymentIconKhalti: {
-    backgroundColor: '#F3E8FF',
-  },
-  paymentIconCash: {
-    backgroundColor: '#FEF3C7',
-  },
-  paymentIconText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#22C55E',
   },
   paymentInfo: {
     flex: 1,
@@ -405,31 +378,32 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  paymentDescription: {
+  paymentDesc: {
     fontSize: 13,
     color: '#6B7280',
   },
-  infoCard: {
+  secureCard: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#F0FDF4',
     borderRadius: 12,
     padding: 16,
-    marginTop: 16,
+    marginTop: 8,
   },
-  infoTextContainer: {
-    flex: 1,
+  secureInfo: {
     marginLeft: 12,
+    flex: 1,
   },
-  infoTitle: {
+  secureTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#22C55E',
     marginBottom: 4,
   },
-  infoText: {
-    fontSize: 13,
+  secureText: {
+    fontSize: 12,
     color: '#6B7280',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   footer: {
     backgroundColor: '#fff',
@@ -461,5 +435,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 0.5,
+    marginRight: 8,
   },
 });
