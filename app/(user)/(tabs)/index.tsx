@@ -202,11 +202,13 @@ const UserDashboard = () => {
               style={styles.parkingCard}
               onPress={() => {
                 router.push({
-                  pathname: '/(user)/bookings/select-datetime',
+                  pathname: '/(user)/parking-details',
                   params: {
                     parkingId: spot.id.toString(),
                     parkingName: spot.name,
+                    parkingAddress: spot.address,
                     pricePerHour: spot.price.replace('Rs ', ''),
+                    distance: spot.distance,
                   }
                 });
               }}
@@ -298,7 +300,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  // NEW - Active Parking Card Styles
+  // Active Parking Card Styles
   activeParkingContainer: {
     paddingHorizontal: 20,
     paddingTop: 15,
