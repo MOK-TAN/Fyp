@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function ReviewBooking() {
@@ -15,53 +15,41 @@ export default function ReviewBooking() {
   const parkingId = params.parkingId as string;
   const parkingName = params.parkingName as string || 'Parking Spot';
   const pricePerHour = params.pricePerHour as string || '50';
-  const date = params.date as string || '03/02/2026';
-  const startTime = params.startTime as string || '10:00';
-  const endTime = params.endTime as string || '12:00';
-  const duration = params.duration as string || '2';
-  const totalPrice = params.totalPrice as string || '100';
-  const vehicleId = params.vehicleId as string || '1';
-  const vehiclePlate = params.vehiclePlate as string || 'BA 12 PA 3456';
-  const vehicleType = params.vehicleType as string || 'car';
-  const vehicleModel = params.vehicleModel as string || 'Toyota Corolla';
+  const slotId = params.slotId as string || 'A1'; // NEW - Selected slot
+  const date = params.date as string || '';
+  const startTime = params.startTime as string || '';
+  const endTime = params.endTime as string || '';
+  const duration = params.duration as string || '0';
+  const vehicleId = params.vehicleId as string || '';
+  const vehiclePlate = params.vehiclePlate as string || '';
+  const vehicleType = params.vehicleType as string || '';
+  const vehicleModel = params.vehicleModel as string || '';
 
-  // Calculate breakdown
-  const basePrice = parseFloat(totalPrice) || 100;
+  const basePrice = parseFloat(duration) * parseFloat(pricePerHour);
   const serviceFee = basePrice * 0.05; // 5% service fee
-  const grandTotal = basePrice + serviceFee;
+  const totalPrice = basePrice + serviceFee;
 
-  // Get vehicle icon
-  const getVehicleIcon = (type: string) => {
-    switch (type) {
-      case 'car': return 'car-outline';
-      case 'bike': return 'bicycle-outline';
-      case 'bus': return 'bus-outline';
-      case 'truck': return 'ios-git-compare-outline';
-      default: return 'car-outline';
-    }
-  };
-
-  // Handle proceed to payment
   const handleProceedToPayment = () => {
-    // router.push({
-    //   pathname: '/(user)/booking/payment-selection',
-    //   params: {
-    //     parkingId,
-    //     parkingName,
-    //     pricePerHour,
-    //     date,
-    //     startTime,
-    //     endTime,
-    //     duration,
-    //     totalPrice: grandTotal.toFixed(0),
-    //     basePrice: basePrice.toFixed(0),
-    //     serviceFee: serviceFee.toFixed(0),
-    //     vehicleId,
-    //     vehiclePlate,
-    //     vehicleType,
-    //     vehicleModel,
-    //   },
-    // });
+    router.push({
+      pathname: '/(user)/bookings/payment-selection',
+      params: {
+        parkingId,
+        parkingName,
+        pricePerHour,
+        slotId, // Pass slot to payment screen
+        date,
+        startTime,
+        endTime,
+        duration,
+        vehicleId,
+        vehiclePlate,
+        vehicleType,
+        vehicleModel,
+        basePrice: basePrice.toFixed(2),
+        serviceFee: serviceFee.toFixed(2),
+        totalPrice: totalPrice.toFixed(2),
+      },
+    });
   };
 
   return (
@@ -89,27 +77,29 @@ export default function ReviewBooking() {
             <Ionicons name="location" size={24} color="#22C55E" />
             <Text style={styles.cardTitle}>Parking Details</Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Location</Text>
             <Text style={styles.detailValue}>{parkingName}</Text>
           </View>
 
-          <View style={styles.divider} />
+          {/* NEW - Show Slot */}
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Parking Slot</Text>
+            <View style={styles.slotBadge}>
+              <Text style={styles.slotBadgeText}>{slotId}</Text>
+            </View>
+          </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Date</Text>
             <Text style={styles.detailValue}>{date}</Text>
           </View>
 
-          <View style={styles.divider} />
-
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Time</Text>
             <Text style={styles.detailValue}>{startTime} - {endTime}</Text>
           </View>
-
-          <View style={styles.divider} />
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Duration</Text>
@@ -120,27 +110,23 @@ export default function ReviewBooking() {
         {/* Vehicle Details Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons 
-              name={getVehicleIcon(vehicleType) as any} 
-              size={24} 
-              color="#22C55E" 
-            />
+            <Ionicons name="car" size={24} color="#22C55E" />
             <Text style={styles.cardTitle}>Vehicle Details</Text>
           </View>
-          
+
           <View style={styles.vehicleInfo}>
-            <View style={styles.vehicleIcon}>
-              <Ionicons
-                name={getVehicleIcon(vehicleType) as any}
-                size={32}
-                color="#22C55E"
+            <View style={styles.vehicleIconContainer}>
+              <Ionicons 
+                name={vehicleType === 'bike' ? 'bicycle' : 'car'} 
+                size={32} 
+                color="#22C55E" 
               />
             </View>
-            <View style={styles.vehicleDetails}>
+            <View style={styles.vehicleText}>
               <Text style={styles.vehiclePlate}>{vehiclePlate}</Text>
               <Text style={styles.vehicleModel}>{vehicleModel}</Text>
               <Text style={styles.vehicleType}>
-                {vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1)}
+                {vehicleType?.charAt(0)?.toUpperCase() + vehicleType?.slice(1) || 'Car'}
               </Text>
             </View>
           </View>
@@ -149,7 +135,7 @@ export default function ReviewBooking() {
         {/* Price Breakdown Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="receipt-outline" size={24} color="#22C55E" />
+            <Ionicons name="receipt" size={24} color="#22C55E" />
             <Text style={styles.cardTitle}>Price Breakdown</Text>
           </View>
 
@@ -157,40 +143,54 @@ export default function ReviewBooking() {
             <Text style={styles.priceLabel}>
               Base Price ({duration}h × Rs {pricePerHour})
             </Text>
-            <Text style={styles.priceValue}>Rs {basePrice.toFixed(0)}</Text>
+            <Text style={styles.priceValue}>Rs {basePrice.toFixed(2)}</Text>
           </View>
 
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Service Fee (5%)</Text>
-            <Text style={styles.priceValue}>Rs {serviceFee.toFixed(0)}</Text>
+            <Text style={styles.priceValue}>Rs {serviceFee.toFixed(2)}</Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>Rs {grandTotal.toFixed(0)}</Text>
+            <Text style={styles.totalValue}>Rs {totalPrice.toFixed(2)}</Text>
           </View>
         </View>
 
         {/* Important Notes */}
         <View style={styles.notesCard}>
-          <View style={styles.noteRow}>
-            <Ionicons name="information-circle" size={20} color="#6B7280" />
+          <View style={styles.notesHeader}>
+            <Ionicons name="information-circle" size={24} color="#F59E0B" />
+            <Text style={styles.notesTitle}>Important Information</Text>
+          </View>
+
+          <View style={styles.noteItem}>
+            <Text style={styles.bullet}>•</Text>
             <Text style={styles.noteText}>
-              Please arrive on time to avoid cancellation
+              Please arrive at least 5 minutes before your start time
             </Text>
           </View>
-          <View style={styles.noteRow}>
-            <Ionicons name="time-outline" size={20} color="#6B7280" />
+
+          <View style={styles.noteItem}>
+            <Text style={styles.bullet}>•</Text>
             <Text style={styles.noteText}>
-              Grace period: 15 minutes after start time
+              Grace period of 15 minutes after booking end time
             </Text>
           </View>
-          <View style={styles.noteRow}>
-            <Ionicons name="shield-checkmark" size={20} color="#6B7280" />
+
+          <View style={styles.noteItem}>
+            <Text style={styles.bullet}>•</Text>
             <Text style={styles.noteText}>
-              Your payment is secure and encrypted
+              Payment is secure and processed by trusted partners
+            </Text>
+          </View>
+
+          <View style={styles.noteItem}>
+            <Text style={styles.bullet}>•</Text>
+            <Text style={styles.noteText}>
+              Your slot {slotId} will be reserved upon payment confirmation
             </Text>
           </View>
         </View>
@@ -198,11 +198,11 @@ export default function ReviewBooking() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Proceed to Payment Button */}
+      {/* Footer */}
       <View style={styles.footer}>
-        <View style={styles.footerTop}>
+        <View style={styles.footerLeft}>
           <Text style={styles.footerLabel}>Total Amount</Text>
-          <Text style={styles.footerPrice}>Rs {grandTotal.toFixed(0)}</Text>
+          <Text style={styles.footerAmount}>Rs {totalPrice.toFixed(2)}</Text>
         </View>
         <TouchableOpacity
           style={styles.proceedButton}
@@ -253,9 +253,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#333',
-    marginLeft: 8,
+    marginLeft: 12,
   },
   detailRow: {
     flexDirection: 'row',
@@ -282,29 +282,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    textAlign: 'right',
-    flex: 1,
-    marginLeft: 16,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 8,
+  // NEW - Slot Badge Styles
+  slotBadge: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#22C55E',
+  },
+  slotBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#22C55E',
   },
   vehicleInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  vehicleIcon: {
-    width: 64,
-    height: 64,
+  vehicleIconContainer: {
+    width: 60,
+    height: 60,
     borderRadius: 12,
     backgroundColor: '#F0FDF4',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
   },
-  vehicleDetails: {
+  vehicleText: {
     flex: 1,
   },
   vehiclePlate: {
@@ -315,12 +321,11 @@ const styles = StyleSheet.create({
   },
   vehicleModel: {
     fontSize: 14,
-    fontWeight: '500',
     color: '#6B7280',
     marginBottom: 2,
   },
   vehicleType: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#9CA3AF',
   },
   priceRow: {
@@ -332,18 +337,22 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 14,
     color: '#6B7280',
-    flex: 1,
   },
   priceValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
   },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 12,
+  },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 8,
+    paddingVertical: 8,
   },
   totalLabel: {
     fontSize: 16,
@@ -351,58 +360,72 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   totalValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#22C55E',
   },
   notesCard: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#FEF3C7',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
-  noteRow: {
+  notesHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  notesTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    marginLeft: 8,
+  },
+  noteItem: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  bullet: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginRight: 8,
+    fontWeight: '700',
   },
   noteText: {
     fontSize: 13,
     color: '#6B7280',
-    marginLeft: 8,
     flex: 1,
     lineHeight: 18,
   },
   footer: {
+    flexDirection: 'row',
     backgroundColor: '#fff',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-  },
-  footerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 16,
+  },
+  footerLeft: {
+    flex: 1,
   },
   footerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
     color: '#6B7280',
+    marginBottom: 4,
   },
-  footerPrice: {
-    fontSize: 24,
+  footerAmount: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#22C55E',
+    color: '#333',
   },
   proceedButton: {
     flexDirection: 'row',
     backgroundColor: '#22C55E',
-    height: 56,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     borderRadius: 12,
-    justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#22C55E',
     shadowOffset: { width: 0, height: 4 },
@@ -411,10 +434,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   proceedText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#fff',
-    letterSpacing: 0.5,
     marginRight: 8,
   },
 });
