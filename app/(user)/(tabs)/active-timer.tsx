@@ -147,6 +147,8 @@ export default function ActiveParking() {
           <Text style={styles.qrReference}>{bookingReference}</Text>
         </View>
 
+        {/* show the qr code and when scan then it can make that timer run */}
+
         {/* Parking Details */}
         <View style={styles.detailsCard}>
           <Text style={styles.cardTitle}>Parking Details</Text>
