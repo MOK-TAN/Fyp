@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 
 // Your Supabase credentials
 const supabaseUrl = 'https://yyhytueronsovjifusjc.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5aHl0dWVyb25zb3ZqaWZ1c2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc1MzY5ODcsImV4cCI6MjA1MzExMjk4N30.FVoEoL6YGkzJ3r4Q4-OYQJJk9XxJI0PF8bqYqNhVKLM';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5aHl0dWVyb25zb3ZqaWZ1c2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODA0NTksImV4cCI6MjA5MDI1NjQ1OX0.TOYy7rdzT8N-9akanNK3phxa-A4NrAORtFxTNt6KC74';
 
 // Use AsyncStorage only on mobile, localStorage on web
 const storage = Platform.OS === 'web' 
