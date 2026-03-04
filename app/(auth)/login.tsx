@@ -37,22 +37,19 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // Format phone with country code
-      const formattedPhone = `+977${phone}`;
+      // Supabase Auth uses email, so we format phone as email
+      const email = `${phone}@parkease.com`;
 
-      // Supabase login
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: `${phone}@parkease.com`, // Using phone as email format
+        email: email,
         password: password,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       if (data.session) {
         // Store session
-        await AsyncStorage.setItem('supabase_session', JSON.stringify(data.session));
+        await AsyncStorage.setItem('auth_token', data.session.access_token);
         await AsyncStorage.setItem('user_phone', phone);
 
         // Navigate to dashboard
@@ -62,18 +59,17 @@ export default function LoginScreen() {
       console.error('Login error:', error);
       Alert.alert(
         'Login Failed',
-        error.message || 'Invalid phone number or password. Please try again.'
+        error.message || 'Invalid phone or password. Please try again.'
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // For testing - auto login
-  const handleQuickLogin = async () => {
+  // Quick test login
+  const handleQuickLogin = () => {
     setPhone('9803124221');
     setPassword('password123');
-    // Will auto-login when you tap the button
   };
 
   return (
@@ -171,7 +167,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             <Ionicons name="flash" size={20} color="#22C55E" />
-            <Text style={styles.testButtonText}>Quick Test Login</Text>
+            <Text style={styles.testButtonText}>Fill Test Credentials</Text>
           </TouchableOpacity>
 
           {/* Sign Up Link */}
