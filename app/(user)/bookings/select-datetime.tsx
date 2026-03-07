@@ -1,88 +1,96 @@
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  KeyboardAvoidingView,
+  Alert,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
+import { styles } from './select-datetime.styles';
 
 export default function SelectDateTime() {
   const params = useLocalSearchParams();
   const parkingId = params.parkingId as string;
   const parkingName = params.parkingName as string || 'Parking Spot';
   const pricePerHour = params.pricePerHour as string || '50';
-  const slotId = params.slotId as string || 'A1'; // NEW - Selected slot
+  const slotId = params.slotId as string || 'A1';
 
-  const [date, setDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [dateError, setDateError] = useState('');
-  const [startTimeError, setStartTimeError] = useState('');
-  const [endTimeError, setEndTimeError] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
-  // Calculate duration
+  // Format date as DD/MM/YYYY
+  const formatDate = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Format time as HH:MM
+  const formatTime = (date: Date) => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  // Calculate duration in hours
   const calculateDuration = () => {
-    if (!startTime || !endTime) return 0;
-    
-    const [startHour] = startTime.split(':').map(Number);
-    const [endHour] = endTime.split(':').map(Number);
-    
-    let hours = endHour - startHour;
-    if (hours < 0) hours += 24;
-    
-    return hours;
+    const diff = endTime.getTime() - startTime.getTime();
+    const hours = diff / (1000 * 60 * 60);
+    return Math.max(0, Math.round(hours * 10) / 10);
   };
 
   // Calculate price
   const calculatePrice = () => {
     const duration = calculateDuration();
     const basePrice = parseFloat(pricePerHour) || 50;
-    return duration * basePrice;
+    return Math.round(duration * basePrice);
   };
 
   const duration = calculateDuration();
   const totalPrice = calculatePrice();
 
-  // Validate inputs
-  const validateInputs = () => {
-    let isValid = true;
-
-    setDateError('');
-    setStartTimeError('');
-    setEndTimeError('');
-
-    if (!date.trim()) {
-      setDateError('Please select a date');
-      isValid = false;
+  // Date picker handlers
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setDate(selectedDate);
     }
-
-    if (!startTime.trim()) {
-      setStartTimeError('Please select start time');
-      isValid = false;
-    }
-
-    if (!endTime.trim()) {
-      setEndTimeError('Please select end time');
-      isValid = false;
-    }
-
-    if (startTime && endTime && calculateDuration() <= 0) {
-      setEndTimeError('End time must be after start time');
-      isValid = false;
-    }
-
-    return isValid;
   };
 
-  // Handle continue
+  const onStartTimeChange = (event: any, selectedTime?: Date) => {
+    setShowStartTimePicker(false);
+    if (selectedTime) {
+      setStartTime(selectedTime);
+      
+      // Auto-set end time to 2 hours after start time
+      const newEndTime = new Date(selectedTime);
+      newEndTime.setHours(newEndTime.getHours() + 2);
+      setEndTime(newEndTime);
+    }
+  };
+
+  const onEndTimeChange = (event: any, selectedTime?: Date) => {
+    setShowEndTimePicker(false);
+    if (selectedTime) {
+      setEndTime(selectedTime);
+    }
+  };
+
+  // Validate and continue
   const handleContinue = () => {
-    if (!validateInputs()) return;
+    if (duration <= 0) {
+      Alert.alert('Invalid Time', 'End time must be after start time');
+      return;
+    }
 
     router.push({
       pathname: '/(user)/bookings/select-vehicle',
@@ -90,10 +98,10 @@ export default function SelectDateTime() {
         parkingId,
         parkingName,
         pricePerHour,
-        slotId, // Pass slot to next screen
-        date,
-        startTime,
-        endTime,
+        slotId,
+        date: formatDate(date),
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
         duration: duration.toString(),
         totalPrice: totalPrice.toString(),
       },
@@ -101,11 +109,7 @@ export default function SelectDateTime() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      {/* Header */}
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -121,9 +125,8 @@ export default function SelectDateTime() {
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
-        {/* NEW - Selected Slot Display */}
+        {/* Selected Slot Display */}
         <View style={styles.slotCard}>
           <View style={styles.slotIconContainer}>
             <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
@@ -146,28 +149,17 @@ export default function SelectDateTime() {
           <Text style={styles.priceText}>Rs {pricePerHour}/hour</Text>
         </View>
 
-        {/* Date Input */}
+        {/* Date Selection */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Select Date</Text>
-          <View style={[
-            styles.inputWrapper,
-            dateError && styles.inputError
-          ]}>
-            <Ionicons name="calendar-outline" size={20} color="#999" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="DD/MM/YYYY (e.g., 05/02/2026)"
-              placeholderTextColor="#999"
-              value={date}
-              onChangeText={(text) => {
-                setDate(text);
-                if (dateError) setDateError('');
-              }}
-            />
-          </View>
-          {dateError ? (
-            <Text style={styles.errorText}>{dateError}</Text>
-          ) : null}
+          <TouchableOpacity
+            style={styles.inputWrapper}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Ionicons name="calendar-outline" size={20} color="#22C55E" style={styles.inputIcon} />
+            <Text style={styles.inputText}>{formatDate(date)}</Text>
+            <Ionicons name="chevron-down" size={20} color="#999" />
+          </TouchableOpacity>
         </View>
 
         {/* Time Selection */}
@@ -175,49 +167,27 @@ export default function SelectDateTime() {
           {/* Start Time */}
           <View style={styles.timeInput}>
             <Text style={styles.label}>Start Time</Text>
-            <View style={[
-              styles.inputWrapper,
-              startTimeError && styles.inputError
-            ]}>
-              <Ionicons name="time-outline" size={20} color="#999" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="10:00"
-                placeholderTextColor="#999"
-                value={startTime}
-                onChangeText={(text) => {
-                  setStartTime(text);
-                  if (startTimeError) setStartTimeError('');
-                }}
-              />
-            </View>
-            {startTimeError ? (
-              <Text style={styles.errorText}>{startTimeError}</Text>
-            ) : null}
+            <TouchableOpacity
+              style={styles.inputWrapper}
+              onPress={() => setShowStartTimePicker(true)}
+            >
+              <Ionicons name="time-outline" size={20} color="#22C55E" style={styles.inputIcon} />
+              <Text style={styles.inputText}>{formatTime(startTime)}</Text>
+              <Ionicons name="chevron-down" size={20} color="#999" />
+            </TouchableOpacity>
           </View>
 
           {/* End Time */}
           <View style={styles.timeInput}>
             <Text style={styles.label}>End Time</Text>
-            <View style={[
-              styles.inputWrapper,
-              endTimeError && styles.inputError
-            ]}>
-              <Ionicons name="time-outline" size={20} color="#999" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="12:00"
-                placeholderTextColor="#999"
-                value={endTime}
-                onChangeText={(text) => {
-                  setEndTime(text);
-                  if (endTimeError) setEndTimeError('');
-                }}
-              />
-            </View>
-            {endTimeError ? (
-              <Text style={styles.errorText}>{endTimeError}</Text>
-            ) : null}
+            <TouchableOpacity
+              style={styles.inputWrapper}
+              onPress={() => setShowEndTimePicker(true)}
+            >
+              <Ionicons name="time-outline" size={20} color="#22C55E" style={styles.inputIcon} />
+              <Text style={styles.inputText}>{formatTime(endTime)}</Text>
+              <Ionicons name="chevron-down" size={20} color="#999" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -237,7 +207,7 @@ export default function SelectDateTime() {
               <Text style={styles.priceValue}>Rs {totalPrice}</Text>
             </View>
             <View style={styles.divider} />
-            <View style={styles.priceRow}>
+            <View style={styles.priceRowTotal}>
               <Text style={styles.totalLabel}>Total Amount</Text>
               <Text style={styles.totalValue}>Rs {totalPrice}</Text>
             </View>
@@ -247,231 +217,50 @@ export default function SelectDateTime() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
+      {/* Date/Time Pickers */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {showStartTimePicker && (
+        <DateTimePicker
+          value={startTime}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onStartTimeChange}
+        />
+      )}
+
+      {showEndTimePicker && (
+        <DateTimePicker
+          value={endTime}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onEndTimeChange}
+          minimumDate={startTime}
+        />
+      )}
+
       {/* Continue Button */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.continueButton}
+          style={[
+            styles.continueButton,
+            duration <= 0 && styles.continueButtonDisabled
+          ]}
           onPress={handleContinue}
+          disabled={duration <= 0}
           activeOpacity={0.8}
         >
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  // NEW - Slot Card Styles
-  slotCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#22C55E',
-  },
-  slotIconContainer: {
-    marginRight: 12,
-  },
-  slotInfo: {
-    flex: 1,
-  },
-  slotLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 2,
-  },
-  slotValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#22C55E',
-  },
-  changeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-  },
-  changeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#22C55E',
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  parkingName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  priceText: {
-    fontSize: 14,
-    color: '#22C55E',
-    fontWeight: '600',
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  inputError: {
-    borderColor: '#EF4444',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  timeInput: {
-    flex: 1,
-  },
-  durationCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  durationText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#22C55E',
-    marginLeft: 12,
-  },
-  priceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  priceLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  priceValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 8,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#22C55E',
-  },
-  footer: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  continueButton: {
-    backgroundColor: '#22C55E',
-    height: 56,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-});
