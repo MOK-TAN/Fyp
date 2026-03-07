@@ -1,49 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { supabase } from '../../../lib/supabase';
+import { styles } from './select-slots.styles';
 
 type SlotStatus = 'available' | 'occupied' | 'selected';
 
 type Slot = {
   id: string;
+  slot_number: string;
   status: SlotStatus;
   section: string;
+  is_available: boolean;
 };
-
-// Dummy slot data - in real app, fetch from API
-const PARKING_SLOTS: Slot[] = [
-  // Section A
-  { id: 'A1', status: 'available', section: 'A' },
-  { id: 'A2', status: 'occupied', section: 'A' },
-  { id: 'A3', status: 'available', section: 'A' },
-  { id: 'A4', status: 'available', section: 'A' },
-  { id: 'A5', status: 'occupied', section: 'A' },
-  // Section B
-  { id: 'B1', status: 'available', section: 'B' },
-  { id: 'B2', status: 'available', section: 'B' },
-  { id: 'B3', status: 'occupied', section: 'B' },
-  { id: 'B4', status: 'available', section: 'B' },
-  { id: 'B5', status: 'available', section: 'B' },
-  // Section C
-  { id: 'C1', status: 'available', section: 'C' },
-  { id: 'C2', status: 'available', section: 'C' },
-  { id: 'C3', status: 'available', section: 'C' },
-  { id: 'C4', status: 'occupied', section: 'C' },
-  { id: 'C5', status: 'available', section: 'C' },
-  // Section D
-  { id: 'D1', status: 'occupied', section: 'D' },
-  { id: 'D2', status: 'available', section: 'D' },
-  { id: 'D3', status: 'available', section: 'D' },
-  { id: 'D4', status: 'available', section: 'D' },
-  { id: 'D5', status: 'occupied', section: 'D' },
-];
 
 export default function SelectSlot() {
   const params = useLocalSearchParams();
@@ -52,14 +29,48 @@ export default function SelectSlot() {
   const parkingName = params.parkingName as string || 'Parking Spot';
   const pricePerHour = params.pricePerHour as string || '50';
 
-  const [slots, setSlots] = useState(PARKING_SLOTS);
+  const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Handle slot selection
+  useEffect(() => {
+    fetchSlots();
+  }, [parkingId]);
+
+  const fetchSlots = async () => {
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from('parking_slots')
+        .select('*')
+        .eq('facility_id', parkingId)
+        .order('slot_number', { ascending: true });
+
+      if (error) throw error;
+
+      if (data) {
+        const formattedSlots: Slot[] = data.map(slot => ({
+          id: slot.id,
+          slot_number: slot.slot_number,
+          status: slot.is_available ? 'available' : 'occupied',
+          section: slot.section,
+          is_available: slot.is_available,
+        }));
+
+        setSlots(formattedSlots);
+      }
+    } catch (error: any) {
+      console.error('Error fetching slots:', error);
+      Alert.alert('Error', 'Failed to load parking slots');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSlotSelect = (slotId: string, status: SlotStatus) => {
     if (status === 'occupied') return;
 
-    // Update slots - mark previous as available, new as selected
     setSlots(prevSlots =>
       prevSlots.map(slot => {
         if (slot.id === slotId) {
@@ -75,10 +86,9 @@ export default function SelectSlot() {
     setSelectedSlot(slotId);
   };
 
-  // Handle continue
   const handleContinue = () => {
     if (!selectedSlot) {
-      alert('Please select a parking slot');
+      Alert.alert('Error', 'Please select a parking slot');
       return;
     }
 
@@ -93,7 +103,6 @@ export default function SelectSlot() {
     });
   };
 
-  // Get slot color
   const getSlotStyle = (status: SlotStatus) => {
     switch (status) {
       case 'available':
@@ -107,7 +116,6 @@ export default function SelectSlot() {
     }
   };
 
-  // Group slots by section
   const groupedSlots = slots.reduce((acc, slot) => {
     if (!acc[slot.section]) {
       acc[slot.section] = [];
@@ -119,9 +127,17 @@ export default function SelectSlot() {
   const availableCount = slots.filter(s => s.status === 'available').length;
   const occupiedCount = slots.filter(s => s.status === 'occupied').length;
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#22C55E" />
+        <Text style={styles.loadingText}>Loading parking slots...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -138,13 +154,11 @@ export default function SelectSlot() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Parking Info */}
         <View style={styles.infoCard}>
           <Text style={styles.parkingName}>{parkingName}</Text>
           <Text style={styles.priceText}>Rs {pricePerHour}/hour</Text>
         </View>
 
-        {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <View style={[styles.statDot, { backgroundColor: '#22C55E' }]} />
@@ -160,29 +174,27 @@ export default function SelectSlot() {
           </View>
         </View>
 
-        {/* Selected Slot Display */}
         {selectedSlot && (
           <View style={styles.selectedCard}>
             <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
-            <Text style={styles.selectedText}>Selected Slot: {selectedSlot}</Text>
+            <Text style={styles.selectedText}>
+              Selected Slot: {slots.find(s => s.id === selectedSlot)?.slot_number}
+            </Text>
           </View>
         )}
 
-        {/* Parking Layout */}
         <View style={styles.layoutCard}>
           <View style={styles.layoutHeader}>
             <Ionicons name="car-outline" size={24} color="#333" />
             <Text style={styles.layoutTitle}>Parking Layout</Text>
           </View>
 
-          {/* Entrance Indicator */}
           <View style={styles.entranceIndicator}>
             <Ionicons name="arrow-down" size={20} color="#22C55E" />
             <Text style={styles.entranceText}>ENTRANCE</Text>
             <Ionicons name="arrow-down" size={20} color="#22C55E" />
           </View>
 
-          {/* Slots by Section */}
           {Object.keys(groupedSlots).sort().map((section) => (
             <View key={section} style={styles.sectionContainer}>
               <Text style={styles.sectionLabel}>Section {section}</Text>
@@ -197,9 +209,10 @@ export default function SelectSlot() {
                   >
                     <Text style={[
                       styles.slotText,
-                      slot.status === 'occupied' && styles.slotTextOccupied
+                      slot.status === 'occupied' && styles.slotTextOccupied,
+                      slot.status === 'selected' && styles.slotTextSelected
                     ]}>
-                      {slot.id}
+                      {slot.slot_number}
                     </Text>
                     {slot.status === 'selected' && (
                       <Ionicons name="checkmark" size={16} color="#fff" style={styles.checkIcon} />
@@ -210,7 +223,6 @@ export default function SelectSlot() {
             </View>
           ))}
 
-          {/* Exit Indicator */}
           <View style={styles.exitIndicator}>
             <Ionicons name="arrow-up" size={20} color="#EF4444" />
             <Text style={styles.exitText}>EXIT</Text>
@@ -218,7 +230,6 @@ export default function SelectSlot() {
           </View>
         </View>
 
-        {/* Instructions */}
         <View style={styles.instructionsCard}>
           <Text style={styles.instructionsTitle}>Instructions</Text>
           <View style={styles.instructionItem}>
@@ -244,7 +255,6 @@ export default function SelectSlot() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Continue Button */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[
@@ -262,262 +272,3 @@ export default function SelectSlot() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  parkingName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  priceText: {
-    fontSize: 14,
-    color: '#22C55E',
-    fontWeight: '600',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 6,
-  },
-  statText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  selectedCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#22C55E',
-  },
-  selectedText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#22C55E',
-    marginLeft: 12,
-  },
-  layoutCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  layoutHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  layoutTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginLeft: 8,
-  },
-  entranceIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    marginBottom: 16,
-    backgroundColor: '#F0FDF4',
-    borderRadius: 8,
-  },
-  entranceText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#22C55E',
-    marginHorizontal: 12,
-    letterSpacing: 1,
-  },
-  sectionContainer: {
-    marginBottom: 20,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 12,
-  },
-  slotGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  slot: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    position: 'relative',
-  },
-  slotAvailable: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#22C55E',
-  },
-  slotOccupied: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#9CA3AF',
-  },
-  slotSelected: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#2563EB',
-  },
-  slotText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#22C55E',
-  },
-  slotTextOccupied: {
-    color: '#9CA3AF',
-  },
-  checkIcon: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-  },
-  exitIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    marginTop: 16,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-  },
-  exitText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#EF4444',
-    marginHorizontal: 12,
-    letterSpacing: 1,
-  },
-  instructionsCard: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  instructionsTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 12,
-  },
-  instructionItem: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  bullet: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginRight: 8,
-    fontWeight: '700',
-  },
-  instructionText: {
-    fontSize: 13,
-    color: '#6B7280',
-    flex: 1,
-    lineHeight: 18,
-  },
-  footer: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  continueButton: {
-    flexDirection: 'row',
-    backgroundColor: '#22C55E',
-    height: 56,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.5,
-    marginRight: 8,
-  },
-});
