@@ -38,7 +38,8 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "react-native-map-link"
     ],
     "experiments": {
       "typedRoutes": true,
