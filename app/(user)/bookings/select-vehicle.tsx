@@ -1,163 +1,164 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
-  StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { supabase } from '../../../lib/supabase';
+import { styles } from './select-vehicle.styles';
 
 type Vehicle = {
   id: string;
-  type: 'car' | 'bike' | 'bus' | 'truck';
-  licensePlate: string;
-  color: string;
-  make: string;
+  plate_number: string;
   model: string;
-  isDefault: boolean;
+  vehicle_type: string;
+  color: string;
+  is_default: boolean;
 };
-
-
-
-// Dummy vehicle data
-const DUMMY_VEHICLES: Vehicle[] = [
-  {
-    id: '1',
-    type: 'car',
-    licensePlate: 'BA 12 PA 3456',
-    color: 'White',
-    make: 'Toyota',
-    model: 'Corolla',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    type: 'bike',
-    licensePlate: 'BA 3 KA 1234',
-    color: 'Red',
-    make: 'Honda',
-    model: 'Shine',
-    isDefault: false,
-  },
-  {
-    id: '3',
-    type: 'car',
-    licensePlate: 'BA 1 JA 5678',
-    color: 'Black',
-    make: 'Hyundai',
-    model: 'i20',
-    isDefault: false,
-  },
-];
 
 export default function SelectVehicle() {
   const params = useLocalSearchParams();
 
-  const slotId = params.slotId as string || 'A1';  // ← ADD THIS LINE
-  
   const parkingId = params.parkingId as string;
   const parkingName = params.parkingName as string;
   const pricePerHour = params.pricePerHour as string;
+  const slotId = params.slotId as string;
   const date = params.date as string;
   const startTime = params.startTime as string;
   const endTime = params.endTime as string;
   const duration = params.duration as string;
   const totalPrice = params.totalPrice as string;
 
-  const [vehicles] = useState(DUMMY_VEHICLES);
-  const [selectedVehicleId, setSelectedVehicleId] = useState(
-    vehicles.find(v => v.isDefault)?.id || ''
-  );
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  const [loading, setLoading] = useState(true);
+  
+  // Manual entry states
+  const [manualPlate, setManualPlate] = useState('BA 12 PA 3456');
+  const [manualModel, setManualModel] = useState('Honda City');
 
-  // Get vehicle icon
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  const fetchVehicles = async () => {
+    try {
+      setLoading(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('is_default', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setVehicles(data);
+        const defaultVehicle = data.find(v => v.is_default);
+        setSelectedVehicleId(defaultVehicle?.id || data[0].id);
+      } else {
+        setVehicles([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching vehicles:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getVehicleIcon = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'car': return 'car-outline';
       case 'bike': return 'bicycle-outline';
-      case 'bus': return 'bus-outline';
-      case 'truck': return 'ios-git-compare-outline';
+      case 'suv': return 'car-sport-outline';
       default: return 'car-outline';
     }
   };
 
-  // Handle continue
-//   const handleContinue = () => {
-//     if (!selectedVehicleId) {
-//       Alert.alert('Error', 'Please select a vehicle');
-//       return;
-//     }
+  const handleManualAdd = () => {
+    if (!manualPlate.trim() || !manualModel.trim()) {
+      Alert.alert('Error', 'Please enter plate number and model');
+      return;
+    }
 
-//     const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
-
-//     router.push({
-//   pathname: '/(user)/bookings/review-booking',
-//   params: {
-//     parkingId,
-//     parkingName,
-//     pricePerHour,
-//     slotId,  // ← ADD THIS LINE
-//     date,
-//     startTime,
-//     endTime,
-//     duration,
-//     totalPrice,
-//     vehicleId: selectedVehicle,
-//     vehiclePlate: selectedVehicleData?.plate,
-//     vehicleType: selectedVehicleData?.type,
-//     vehicleModel: selectedVehicleData?.model,
-//   }
-// });
-//   };
-
-const handleContinue = () => {
-  if (!selectedVehicleId) {
-    Alert.alert('Error', 'Please select a vehicle');
-    return;
-  }
-
-  const selectedVehicle = vehicles.find(
-    v => v.id === selectedVehicleId
-  );
-
-  if (!selectedVehicle) {
-    Alert.alert('Error', 'Selected vehicle not found');
-    return;
-  }
-
-  router.push({
-    pathname: '/(user)/bookings/review-booking',
-    params: {
-      parkingId,
-      parkingName,
-      pricePerHour,
-      slotId,
-      date,
-      startTime,
-      endTime,
-      duration,
-      totalPrice,
-
-      // ✅ vehicle data (PRIMITIVES ONLY)
-      vehicleId: selectedVehicle.id,
-      vehiclePlate: selectedVehicle.licensePlate,
-      vehicleType: selectedVehicle.type,
-      vehicleModel: selectedVehicle.model,
-    },
-  });
-};
-
-
-  // Handle add vehicle
-  const handleAddVehicle = () => {
-    Alert.alert('Add Vehicle', 'Vehicle management feature coming soon!');
+    const tempVehicle: Vehicle = {
+      id: 'manual-' + Date.now(),
+      plate_number: manualPlate.trim().toUpperCase(),
+      model: manualModel.trim(),
+      vehicle_type: 'car',
+      color: 'Not specified',
+      is_default: true,
+    };
+    
+    setVehicles([tempVehicle]);
+    setSelectedVehicleId(tempVehicle.id);
   };
+
+  const handleContinue = () => {
+    if (!selectedVehicleId) {
+      Alert.alert('Error', 'Please select a vehicle');
+      return;
+    }
+
+    const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+
+    if (!selectedVehicle) {
+      Alert.alert('Error', 'Selected vehicle not found');
+      return;
+    }
+
+    router.push({
+      pathname: '/(user)/bookings/review-booking',
+      params: {
+        parkingId,
+        parkingName,
+        pricePerHour,
+        slotId,
+        date,
+        startTime,
+        endTime,
+        duration,
+        totalPrice,
+        vehicleId: selectedVehicle.id,
+        vehiclePlate: selectedVehicle.plate_number,
+        vehicleType: selectedVehicle.vehicle_type,
+        vehicleModel: selectedVehicle.model,
+      },
+    });
+  };
+
+  const handleAddVehicle = () => {
+    Alert.alert(
+      'Add Vehicle',
+      'You can add vehicles from your Profile. For now, use the quick entry form below.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#22C55E" />
+        <Text style={styles.loadingText}>Loading vehicles...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -174,7 +175,6 @@ const handleContinue = () => {
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Booking Summary */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>{parkingName}</Text>
           <View style={styles.summaryRow}>
@@ -191,14 +191,47 @@ const handleContinue = () => {
           </View>
         </View>
 
-        {/* Vehicles List */}
         <Text style={styles.sectionTitle}>Your Vehicles</Text>
 
         {vehicles.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="car-outline" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyText}>No vehicles added yet</Text>
-            <Text style={styles.emptySubtext}>Add a vehicle to continue booking</Text>
+          <View style={styles.manualEntryCard}>
+            <View style={styles.manualHeader}>
+              <Ionicons name="car-sport" size={32} color="#22C55E" />
+            </View>
+            <Text style={styles.manualTitle}>Quick Vehicle Entry</Text>
+            <Text style={styles.manualSubtitle}>Enter your vehicle details to continue booking</Text>
+            
+            <View style={styles.manualInputGroup}>
+              <Text style={styles.manualLabel}>Plate Number</Text>
+              <TextInput
+                style={styles.manualInput}
+                placeholder="BA 12 PA 3456"
+                value={manualPlate}
+                onChangeText={setManualPlate}
+                autoCapitalize="characters"
+              />
+            </View>
+
+            <View style={styles.manualInputGroup}>
+              <Text style={styles.manualLabel}>Model</Text>
+              <TextInput
+                style={styles.manualInput}
+                placeholder="Honda City"
+                value={manualModel}
+                onChangeText={setManualModel}
+              />
+            </View>
+            
+            <TouchableOpacity
+              style={styles.manualAddButton}
+              onPress={handleManualAdd}
+            >
+              <Text style={styles.manualAddButtonText}>Continue with this vehicle</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.manualNote}>
+              💡 This vehicle will be saved when you complete the booking
+            </Text>
           </View>
         ) : (
           <>
@@ -212,7 +245,6 @@ const handleContinue = () => {
                 onPress={() => setSelectedVehicleId(vehicle.id)}
                 activeOpacity={0.7}
               >
-                {/* Radio Button */}
                 <View style={styles.radioContainer}>
                   <View style={[
                     styles.radioOuter,
@@ -224,50 +256,48 @@ const handleContinue = () => {
                   </View>
                 </View>
 
-                {/* Vehicle Icon */}
                 <View style={[
                   styles.vehicleIcon,
                   selectedVehicleId === vehicle.id && styles.vehicleIconSelected
                 ]}>
                   <Ionicons
-                    name={getVehicleIcon(vehicle.type) as any}
+                    name={getVehicleIcon(vehicle.vehicle_type) as any}
                     size={28}
                     color={selectedVehicleId === vehicle.id ? '#22C55E' : '#6B7280'}
                   />
                 </View>
 
-                {/* Vehicle Info */}
                 <View style={styles.vehicleInfo}>
                   <View style={styles.vehicleHeader}>
-                    <Text style={styles.vehiclePlate}>{vehicle.licensePlate}</Text>
-                    {vehicle.isDefault && (
+                    <Text style={styles.vehiclePlate}>{vehicle.plate_number}</Text>
+                    {vehicle.is_default && (
                       <View style={styles.defaultBadge}>
                         <Text style={styles.defaultText}>Default</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={styles.vehicleModel}>{vehicle.make} {vehicle.model}</Text>
-                  <Text style={styles.vehicleColor}>{vehicle.color} • {vehicle.type}</Text>
+                  <Text style={styles.vehicleModel}>{vehicle.model}</Text>
+                  <Text style={styles.vehicleColor}>
+                    {vehicle.color} • {vehicle.vehicle_type}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))}
+
+            <TouchableOpacity
+              style={styles.addVehicleButton}
+              onPress={handleAddVehicle}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add-circle-outline" size={24} color="#22C55E" />
+              <Text style={styles.addVehicleText}>Add New Vehicle</Text>
+            </TouchableOpacity>
           </>
         )}
-
-        {/* Add Vehicle Button */}
-        <TouchableOpacity
-          style={styles.addVehicleButton}
-          onPress={handleAddVehicle}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add-circle-outline" size={24} color="#22C55E" />
-          <Text style={styles.addVehicleText}>Add New Vehicle</Text>
-        </TouchableOpacity>
 
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Continue Button */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[
@@ -284,223 +314,3 @@ const handleContinue = () => {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  summaryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 12,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  summaryText: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 8,
-  },
-  summaryPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#22C55E',
-    marginLeft: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 16,
-  },
-  vehicleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  vehicleCardSelected: {
-    borderColor: '#22C55E',
-    backgroundColor: '#F0FDF4',
-  },
-  radioContainer: {
-    marginRight: 12,
-  },
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioOuterSelected: {
-    borderColor: '#22C55E',
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#22C55E',
-  },
-  vehicleIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  vehicleIconSelected: {
-    backgroundColor: '#F0FDF4',
-  },
-  vehicleInfo: {
-    flex: 1,
-  },
-  vehicleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  vehiclePlate: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginRight: 8,
-  },
-  defaultBadge: {
-    backgroundColor: '#22C55E',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  defaultText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  vehicleModel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 2,
-  },
-  vehicleColor: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  addVehicleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#22C55E',
-    borderStyle: 'dashed',
-    marginTop: 8,
-  },
-  addVehicleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#22C55E',
-    marginLeft: 8,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
-  footer: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  continueButton: {
-    backgroundColor: '#22C55E',
-    height: 56,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-});

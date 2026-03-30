@@ -26,8 +26,16 @@ export default function SelectDateTime() {
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
-  // Format date as DD/MM/YYYY
+  // Format date as YYYY-MM-DD (PostgreSQL compatible)
   const formatDate = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+  };
+
+  // Format date for display as DD/MM/YYYY
+  const formatDateDisplay = (date: Date) => {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
@@ -157,7 +165,7 @@ export default function SelectDateTime() {
             onPress={() => setShowDatePicker(true)}
           >
             <Ionicons name="calendar-outline" size={20} color="#22C55E" style={styles.inputIcon} />
-            <Text style={styles.inputText}>{formatDate(date)}</Text>
+            <Text style={styles.inputText}>{formatDateDisplay(date)}</Text>
             <Ionicons name="chevron-down" size={20} color="#999" />
           </TouchableOpacity>
         </View>

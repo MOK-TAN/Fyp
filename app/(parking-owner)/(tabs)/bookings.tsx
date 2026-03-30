@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { supabase } from '../../../lib/supabase';
 import { styles } from './bookings.styles';
 
-type BookingStatus = 'all' | 'active' | 'completed' | 'cancelled';
+type BookingStatus = 'all' | 'confirmed' | 'active' | 'completed' | 'cancelled';
 
 type Booking = {
   id: string;
@@ -27,6 +28,7 @@ type Booking = {
   total_amount: number;
   payment_status: string;
   booking_status: string;
+  slot_id: string;
 };
 
 export default function Bookings() {
@@ -36,66 +38,6 @@ export default function Bookings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus>('all');
 
-  // Dummy data - will be replaced with Supabase
-  const dummyBookings: Booking[] = [
-    {
-      id: '1',
-      booking_reference: 'TX-90210',
-      facility_name: 'Grand Central',
-      customer_name: 'Sarah Jenkins',
-      vehicle_plate: 'BA-1-PA-1234',
-      slot_number: 'A1',
-      booking_date: '2026-03-21',
-      start_time: '10:45 AM',
-      end_time: '02:45 PM',
-      total_amount: 45.00,
-      payment_status: 'paid',
-      booking_status: 'active',
-    },
-    {
-      id: '2',
-      booking_reference: 'TX-90211',
-      facility_name: 'Sunset Plaza',
-      customer_name: 'Marcus Thorne',
-      vehicle_plate: 'BA-2-KA-5678',
-      slot_number: 'B3',
-      booking_date: '2026-03-21',
-      start_time: '09:12 AM',
-      end_time: '01:12 PM',
-      total_amount: 22.50,
-      payment_status: 'paid',
-      booking_status: 'completed',
-    },
-    {
-      id: '3',
-      booking_reference: 'TX-90212',
-      facility_name: 'Downtown Express',
-      customer_name: 'Emily Chen',
-      vehicle_plate: 'BA-3-JA-9012',
-      slot_number: 'C2',
-      booking_date: '2026-03-21',
-      start_time: '08:30 AM',
-      end_time: '12:30 PM',
-      total_amount: 112.00,
-      payment_status: 'pending',
-      booking_status: 'active',
-    },
-    {
-      id: '4',
-      booking_reference: 'TX-90213',
-      facility_name: 'Grand Central',
-      customer_name: 'Robert Mills',
-      vehicle_plate: 'BA-4-PA-3456',
-      slot_number: 'D4',
-      booking_date: '2026-03-20',
-      start_time: '02:00 PM',
-      end_time: '06:00 PM',
-      total_amount: 67.50,
-      payment_status: 'paid',
-      booking_status: 'cancelled',
-    },
-  ];
-
   useEffect(() => {
     fetchBookings();
   }, []);
@@ -103,15 +45,69 @@ export default function Bookings() {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      // TODO: Fetch from Supabase
-      // For now, use dummy data
-      setTimeout(() => {
-        setBookings(dummyBookings);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get owner's facility IDs
+      const { data: facilities } = await supabase
+        .from('parking_facilities')
+        .select('id')
+        .eq('owner_id', user.id);
+
+      if (!facilities || facilities.length === 0) {
+        setBookings([]);
         setLoading(false);
         setRefreshing(false);
-      }, 500);
+        return;
+      }
+
+      const facilityIds = facilities.map(f => f.id);
+
+      // Fetch all bookings for owner's facilities with joins
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          booking_reference,
+          booking_date,
+          start_time,
+          end_time,
+          total_amount,
+          payment_status,
+          booking_status,
+          slot_id,
+          parking_facilities (name),
+          profiles (full_name),
+          vehicles (plate_number),
+          parking_slots (slot_number)
+        `)
+        .in('facility_id', facilityIds)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedBookings: Booking[] = (data || []).map((b: any) => ({
+        id: b.id,
+        booking_reference: b.booking_reference,
+        facility_name: b.parking_facilities?.name || 'Unknown',
+        customer_name: b.profiles?.full_name || 'Guest',
+        vehicle_plate: b.vehicles?.plate_number || 'N/A',
+        slot_number: b.parking_slots?.slot_number || '-',
+        booking_date: b.booking_date,
+        start_time: b.start_time,
+        end_time: b.end_time,
+        total_amount: b.total_amount,
+        payment_status: b.payment_status,
+        booking_status: b.booking_status,
+        slot_id: b.slot_id,
+      }));
+
+      setBookings(formattedBookings);
     } catch (error) {
       console.error('Error fetching bookings:', error);
+      Alert.alert('Error', 'Failed to load bookings');
+    } finally {
       setLoading(false);
       setRefreshing(false);
     }
@@ -133,20 +129,96 @@ export default function Bookings() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO: Update booking status in Supabase
-              // TODO: Free up the slot
-              const updatedBookings = bookings.map(b =>
-                b.id === booking.id ? { ...b, booking_status: 'cancelled' } : b
+              // Update booking status
+              const { error: bookingError } = await supabase
+                .from('bookings')
+                .update({
+                  booking_status: 'cancelled',
+                  is_timer_active: false,
+                })
+                .eq('id', booking.id);
+
+              if (bookingError) throw bookingError;
+
+              // Free up the slot
+              const { error: slotError } = await supabase
+                .from('parking_slots')
+                .update({
+                  is_available: true,
+                  is_occupied: false,
+                  current_booking_id: null,
+                })
+                .eq('id', booking.slot_id);
+
+              if (slotError) {
+                console.error('Slot release error:', slotError);
+              }
+
+              // Update local state
+              setBookings(prev =>
+                prev.map(b =>
+                  b.id === booking.id ? { ...b, booking_status: 'cancelled' } : b
+                )
               );
-              setBookings(updatedBookings);
+
               Alert.alert('Success', 'Booking cancelled successfully');
-            } catch (error) {
+            } catch (error: any) {
+              console.error('Cancel error:', error);
               Alert.alert('Error', 'Failed to cancel booking');
             }
           },
         },
       ]
     );
+  };
+
+  const handleActivateBooking = (booking: Booking) => {
+    Alert.alert(
+      'Activate Parking',
+      `Start parking timer for ${booking.customer_name}?\n\nSlot: ${booking.slot_number}\nVehicle: ${booking.vehicle_plate}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Activate',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('bookings')
+                .update({
+                  booking_status: 'active',
+                  is_timer_active: true,
+                  actual_start_time: new Date().toISOString(),
+                })
+                .eq('id', booking.id);
+
+              if (error) throw error;
+
+              // Update local state
+              setBookings(prev =>
+                prev.map(b =>
+                  b.id === booking.id ? { ...b, booking_status: 'active' } : b
+                )
+              );
+
+              Alert.alert('Parking Activated', `Timer started for ${booking.customer_name} at slot ${booking.slot_number}`);
+            } catch (error: any) {
+              console.error('Activate error:', error);
+              Alert.alert('Error', 'Failed to activate parking');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatTime = (time: string) => {
+    // time comes as "HH:MM:SS" or "HH:MM" from DB
+    const parts = time.split(':');
+    const hours = parseInt(parts[0]);
+    const minutes = parts[1];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes} ${ampm}`;
   };
 
   const filteredBookings = bookings.filter(booking => {
@@ -187,8 +259,8 @@ export default function Bookings() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Bookings</Text>
-        <TouchableOpacity>
-          <Ionicons name="filter-outline" size={24} color="#111827" />
+        <TouchableOpacity onPress={onRefresh}>
+          <Ionicons name="refresh-outline" size={24} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -219,6 +291,15 @@ export default function Bookings() {
           >
             <Text style={[styles.filterTabText, selectedStatus === 'all' && styles.filterTabTextActive]}>
               All ({getStatusCount('all')})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterTab, selectedStatus === 'confirmed' && styles.filterTabActive]}
+            onPress={() => setSelectedStatus('confirmed')}
+          >
+            <Text style={[styles.filterTabText, selectedStatus === 'confirmed' && styles.filterTabTextActive]}>
+              Confirmed ({getStatusCount('confirmed')})
             </Text>
           </TouchableOpacity>
 
@@ -256,7 +337,7 @@ export default function Bookings() {
             <Ionicons name="calendar-outline" size={64} color="#D1D5DB" />
             <Text style={styles.emptyText}>No bookings found</Text>
             <Text style={styles.emptySubtext}>
-              {searchQuery ? 'Try a different search' : 'Bookings will appear here'}
+              {searchQuery ? 'Try a different search' : 'Bookings will appear here when customers book'}
             </Text>
           </View>
         ) : (
@@ -268,12 +349,14 @@ export default function Bookings() {
                   <Text style={styles.bookingReference}>{booking.booking_reference}</Text>
                   <View style={[
                     styles.statusBadge,
+                    booking.booking_status === 'confirmed' && styles.statusActive,
                     booking.booking_status === 'active' && styles.statusActive,
                     booking.booking_status === 'completed' && styles.statusCompleted,
                     booking.booking_status === 'cancelled' && styles.statusCancelled,
                   ]}>
                     <Text style={[
                       styles.statusText,
+                      booking.booking_status === 'confirmed' && styles.statusTextActive,
                       booking.booking_status === 'active' && styles.statusTextActive,
                       booking.booking_status === 'completed' && styles.statusTextCompleted,
                       booking.booking_status === 'cancelled' && styles.statusTextCancelled,
@@ -302,7 +385,7 @@ export default function Bookings() {
                 <View style={styles.infoItem}>
                   <Ionicons name="time-outline" size={16} color="#6B7280" />
                   <Text style={styles.infoText}>
-                    {booking.start_time} - {booking.end_time}
+                    {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                   </Text>
                 </View>
                 <View style={styles.infoItem}>
@@ -326,6 +409,25 @@ export default function Bookings() {
                   </Text>
                 </View>
               </View>
+
+              {/* Activate Button (only for confirmed bookings) */}
+              {booking.booking_status === 'confirmed' && (
+                <View style={styles.actionButtonsRow}>
+                  <TouchableOpacity
+                    style={styles.activateButton}
+                    onPress={() => handleActivateBooking(booking)}
+                  >
+                    <Ionicons name="play-circle" size={18} color="#fff" />
+                    <Text style={styles.activateButtonText}>Activate Parking</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cancelButtonSmall}
+                    onPress={() => handleCancelBooking(booking)}
+                  >
+                    <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Cancel Button (only for active bookings) */}
               {booking.booking_status === 'active' && (

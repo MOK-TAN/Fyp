@@ -22,9 +22,14 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
+  headerGreeting: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#111827',
   },
   profileButton: {
@@ -43,12 +48,109 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
+
+  // ─── Scan QR Button ───
+  scanButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  scanButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  scanIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#22C55E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  scanButtonTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 3,
+  },
+  scanButtonSubtitle: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+
+  // ─── Earnings Summary ───
+  earningsSummary: {
+    backgroundColor: '#22C55E',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  earningsHeader: {
+    marginBottom: 16,
+  },
+  earningsTitle: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginBottom: 8,
+  },
+  earningsAmount: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -1,
+  },
+  earningsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  earningsItem: {
+    flex: 1,
+  },
+  earningsDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#FFFFFF',
+    opacity: 0.3,
+    marginHorizontal: 16,
+  },
+  earningsLabel: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginBottom: 4,
+  },
+  earningsValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // ─── Section Title ───
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#111827',
     marginBottom: 16,
   },
+
+  // ─── Metrics ───
   metricsList: {
     gap: 12,
     marginBottom: 20,
@@ -89,6 +191,8 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
   },
+
+  // ─── System Status ───
   systemStatus: {
     flexDirection: 'row',
     backgroundColor: '#F0FDF4',
@@ -121,6 +225,8 @@ export const styles = StyleSheet.create({
     color: '#15803D',
     lineHeight: 16,
   },
+
+  // ─── Recent Activity ───
   activityHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -193,14 +299,26 @@ export const styles = StyleSheet.create({
   statusTextPending: {
     color: '#92400E',
   },
+
+  // ─── Empty State ───
   emptyState: {
     padding: 40,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 14,
-    color: '#9CA3AF',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 12,
   },
+  emptySubtext: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+
+  // ─── Report Button ───
   reportButton: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -215,56 +333,4 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B7280',
   },
-
-  earningsSummary: {
-  backgroundColor: '#22C55E',
-  borderRadius: 16,
-  padding: 20,
-  marginBottom: 24,
-  shadowColor: '#000000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.15,
-  shadowRadius: 12,
-  elevation: 6,
-},
-earningsHeader: {
-  marginBottom: 16,
-},
-earningsTitle: {
-  fontSize: 14,
-  color: '#FFFFFF',
-  opacity: 0.9,
-  marginBottom: 8,
-},
-earningsAmount: {
-  fontSize: 36,
-  fontWeight: '700',
-  color: '#FFFFFF',
-  letterSpacing: -1,
-},
-earningsRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-earningsItem: {
-  flex: 1,
-},
-earningsDivider: {
-  width: 1,
-  height: 40,
-  backgroundColor: '#FFFFFF',
-  opacity: 0.3,
-  marginHorizontal: 16,
-},
-earningsLabel: {
-  fontSize: 13,
-  color: '#FFFFFF',
-  opacity: 0.9,
-  marginBottom: 4,
-},
-earningsValue: {
-  fontSize: 18,
-  fontWeight: '700',
-  color: '#FFFFFF',
-},
 });

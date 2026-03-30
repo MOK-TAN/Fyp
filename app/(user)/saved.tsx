@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,62 +12,100 @@ import {
   View
 } from 'react-native';
 import BottomTabs from '../../components/BottomTabs';
+import { supabase } from '../../lib/supabase';
 
-// Dummy saved parking data with categories
-const SAVED_PARKING = [
-  {
-    id: 1,
-    name: 'New Road Parking',
-    address: 'Juddha Sadak, Kathmandu',
-    category: 'Work',
-    distance: '2km',
-    price: '199',
-    lastVisited: '2 days ago',
-    rating: 4.5,
-    visits: 12,
-  },
-  {
-    id: 2,
-    name: 'Thamel Square',
-    address: 'Thamel Marg, Kathmandu',
-    category: 'Shopping',
-    distance: '5km',
-    price: '300',
-    lastVisited: '1 week ago',
-    rating: 4.8,
-    visits: 5,
-  },
-  {
-    id: 3,
-    name: 'Durbar Marg Parking',
-    address: 'Durbar Marg, Kathmandu',
-    category: 'Home',
-    distance: '4km',
-    price: '400',
-    lastVisited: 'Yesterday',
-    rating: 4.7,
-    visits: 8,
-  },
-  {
-    id: 4,
-    name: 'Boudha Parking',
-    address: 'Boudhanath, Kathmandu',
-    category: 'Other',
-    distance: '8km',
-    price: '200',
-    lastVisited: '3 days ago',
-    rating: 4.4,
-    visits: 3,
-  },
-];
+type SavedSpot = {
+  id: string;
+  facility_id: string;
+  category: string;
+  name: string;
+  address: string;
+  price_per_hour: number;
+  total_slots: number;
+  available_slots: number;
+};
 
 const SavedParking = () => {
-  const [savedSpots, setSavedSpots] = useState(SAVED_PARKING);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [savedSpots, setSavedSpots] = useState<SavedSpot[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const categories = ['All', 'Work', 'Home', 'Shopping', 'Other'];
 
-  const handleUnsave = (id: number, name: string) => {
+  // Re-fetch on focus (in case user saved/unsaved from another screen)
+  useFocusEffect(
+    useCallback(() => {
+      fetchSavedParking();
+    }, [])
+  );
+
+  const fetchSavedParking = async () => {
+    try {
+      setLoading(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('saved_parking')
+        .select(`
+          id,
+          facility_id,
+          category,
+          parking_facilities (
+            name,
+            address,
+            price_per_hour,
+            total_slots
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Get available slot counts for each facility
+      const spots: SavedSpot[] = [];
+
+      for (const item of (data || [])) {
+        const facility = (item as any).parking_facilities;
+        if (!facility) continue;
+
+        const { count } = await supabase
+          .from('parking_slots')
+          .select('*', { count: 'exact', head: true })
+          .eq('facility_id', item.facility_id)
+          .eq('is_available', true)
+          .eq('is_occupied', false);
+
+        spots.push({
+          id: item.id,
+          facility_id: item.facility_id,
+          category: item.category || 'Other',
+          name: facility.name,
+          address: facility.address,
+          price_per_hour: facility.price_per_hour,
+          total_slots: facility.total_slots,
+          available_slots: count || 0,
+        });
+      }
+
+      setSavedSpots(spots);
+    } catch (error) {
+      console.error('Error fetching saved parking:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchSavedParking();
+  };
+
+  const handleUnsave = (id: string, name: string) => {
     Alert.alert(
       'Remove from Saved',
       `Remove "${name}" from your saved parking spots?`,
@@ -74,59 +114,96 @@ const SavedParking = () => {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => {
-            setSavedSpots(savedSpots.filter(spot => spot.id !== id));
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('saved_parking')
+                .delete()
+                .eq('id', id);
+
+              if (error) throw error;
+
+              setSavedSpots(prev => prev.filter(spot => spot.id !== id));
+            } catch (error) {
+              console.error('Unsave error:', error);
+              Alert.alert('Error', 'Failed to remove from saved');
+            }
           },
         },
       ]
     );
   };
 
-  const handleSpotPress = (spot: typeof SAVED_PARKING[0]) => {
+  const handleUpdateCategory = (spotId: string, newCategory: string) => {
+    Alert.alert(
+      'Change Category',
+      `Move to "${newCategory}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Move',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('saved_parking')
+                .update({ category: newCategory.toLowerCase() })
+                .eq('id', spotId);
+
+              if (error) throw error;
+
+              setSavedSpots(prev =>
+                prev.map(s => s.id === spotId ? { ...s, category: newCategory.toLowerCase() } : s)
+              );
+            } catch (error) {
+              console.error('Category update error:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSpotPress = (spot: SavedSpot) => {
     router.push({
       pathname: '/(user)/parking-details',
       params: {
-        parkingId: spot.id.toString(),
+        parkingId: spot.facility_id,
         parkingName: spot.name,
         parkingAddress: spot.address,
-        pricePerHour: spot.price,
-        distance: spot.distance,
+        pricePerHour: spot.price_per_hour.toString(),
       }
     });
   };
 
   const getCategoryIcon = (category: string) => {
-    switch(category) {
-      case 'Work': return 'briefcase';
-      case 'Home': return 'home';
-      case 'Shopping': return 'cart';
+    switch (category.toLowerCase()) {
+      case 'work': return 'briefcase';
+      case 'home': return 'home';
+      case 'shopping': return 'cart';
       default: return 'location';
     }
   };
 
   const getCategoryColor = (category: string) => {
-    switch(category) {
-      case 'Work': return '#3B82F6';
-      case 'Home': return '#22C55E';
-      case 'Shopping': return '#F59E0B';
+    switch (category.toLowerCase()) {
+      case 'work': return '#3B82F6';
+      case 'home': return '#22C55E';
+      case 'shopping': return '#F59E0B';
       default: return '#6B7280';
     }
   };
 
-  const filteredSpots = selectedCategory === 'All' 
-    ? savedSpots 
-    : savedSpots.filter(spot => spot.category === selectedCategory);
+  const filteredSpots = selectedCategory === 'All'
+    ? savedSpots
+    : savedSpots.filter(spot => spot.category.toLowerCase() === selectedCategory.toLowerCase());
 
-  const renderStars = (rating: number) => {
-    return [...Array(5)].map((_, index) => (
-      <Ionicons
-        key={index}
-        name={index < Math.floor(rating) ? 'star' : 'star-outline'}
-        size={12}
-        color="#F59E0B"
-      />
-    ));
-  };
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#22C55E" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -138,15 +215,18 @@ const SavedParking = () => {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22C55E" />
+        }
       >
         {/* Category Filters */}
         <View style={styles.categoriesSection}>
           <Text style={styles.categoriesLabel}>Categories</Text>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categories}
           >
@@ -179,11 +259,11 @@ const SavedParking = () => {
             </View>
             <Text style={styles.emptyTitle}>No Saved Parking</Text>
             <Text style={styles.emptySubtitle}>
-              {selectedCategory === 'All' 
-                ? 'Start saving your favorite parking spots for quick access'
+              {selectedCategory === 'All'
+                ? 'Tap the heart icon on any parking facility to save it here'
                 : `No parking spots saved in ${selectedCategory} category`}
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.emptyButton}
               onPress={() => router.push('/(user)/(tabs)')}
             >
@@ -191,7 +271,6 @@ const SavedParking = () => {
             </TouchableOpacity>
           </View>
         ) : (
-          /* Saved List */
           <View style={styles.listContainer}>
             {filteredSpots.map((spot) => (
               <TouchableOpacity
@@ -205,7 +284,7 @@ const SavedParking = () => {
                   <View style={styles.parkingIconContainer}>
                     <Ionicons name="car-sport" size={28} color="#22C55E" />
                   </View>
-                  
+
                   <View style={styles.parkingMainInfo}>
                     <View style={styles.parkingNameRow}>
                       <Text style={styles.parkingName} numberOfLines={1}>
@@ -219,79 +298,73 @@ const SavedParking = () => {
                         <Ionicons name="bookmark" size={22} color="#22C55E" />
                       </TouchableOpacity>
                     </View>
-                    
-                    <View style={styles.parkingMeta}>
-                      <View style={styles.ratingContainer}>
-                        {renderStars(spot.rating)}
-                        <Text style={styles.ratingText}>{spot.rating}</Text>
-                      </View>
-                      <View style={styles.metaDivider} />
-                      <Ionicons name="navigate" size={12} color="#6B7280" />
-                      <Text style={styles.metaText}>{spot.distance}</Text>
-                    </View>
-                    
+
                     <Text style={styles.parkingAddress} numberOfLines={1}>
                       {spot.address}
                     </Text>
+
+                    <View style={styles.availabilityRow}>
+                      <View style={[
+                        styles.availabilityDot,
+                        { backgroundColor: spot.available_slots > 0 ? '#22C55E' : '#EF4444' }
+                      ]} />
+                      <Text style={styles.availabilityText}>
+                        {spot.available_slots > 0
+                          ? `${spot.available_slots}/${spot.total_slots} slots available`
+                          : 'Full'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
                 {/* Card Footer */}
                 <View style={styles.cardFooter}>
-                  <View style={styles.categoryBadge} 
-  >
-                    <Ionicons 
-                      name={getCategoryIcon(spot.category) as any} 
-                      size={14} 
-                      color={getCategoryColor(spot.category)} 
+                  <TouchableOpacity
+                    style={styles.categoryBadge}
+                    onPress={() => {
+                      const nextCategories = ['Work', 'Home', 'Shopping', 'Other'];
+                      const currentIndex = nextCategories.findIndex(c => c.toLowerCase() === spot.category.toLowerCase());
+                      const nextCategory = nextCategories[(currentIndex + 1) % nextCategories.length];
+                      handleUpdateCategory(spot.id, nextCategory);
+                    }}
+                  >
+                    <Ionicons
+                      name={getCategoryIcon(spot.category) as any}
+                      size={14}
+                      color={getCategoryColor(spot.category)}
                     />
-                    <Text style={[
-                      styles.categoryBadgeText,
-                      { color: getCategoryColor(spot.category) }
-                    ]}>
-                      {spot.category}
+                    <Text style={[styles.categoryBadgeText, { color: getCategoryColor(spot.category) }]}>
+                      {spot.category.charAt(0).toUpperCase() + spot.category.slice(1)}
                     </Text>
-                  </View>
-
-                  <View style={styles.statsContainer}>
-                    <View style={styles.statItem}>
-                      <Ionicons name="time-outline" size={14} color="#6B7280" />
-                      <Text style={styles.statText}>{spot.lastVisited}</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                      <Ionicons name="repeat-outline" size={14} color="#6B7280" />
-                      <Text style={styles.statText}>{spot.visits} visits</Text>
-                    </View>
-                  </View>
+                  </TouchableOpacity>
 
                   <View style={styles.priceContainer}>
-                    <Text style={styles.price}>Rs {spot.price}</Text>
+                    <Text style={styles.price}>Rs {spot.price_per_hour}</Text>
                     <Text style={styles.priceUnit}>/hr</Text>
                   </View>
                 </View>
 
-                {/* Quick Action Buttons */}
+                {/* Quick Actions */}
                 <View style={styles.quickActions}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.quickActionButton}
                     onPress={() => handleSpotPress(spot)}
                   >
-                    <Ionicons name="navigate" size={16} color="#22C55E" />
-                    <Text style={styles.quickActionText}>Directions</Text>
+                    <Ionicons name="information-circle-outline" size={16} color="#22C55E" />
+                    <Text style={styles.quickActionText}>Details</Text>
                   </TouchableOpacity>
-                  
+
                   <View style={styles.actionDivider} />
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     style={styles.quickActionButton}
                     onPress={() => {
                       router.push({
                         pathname: '/(user)/bookings/select-slot',
                         params: {
-                          parkingId: spot.id.toString(),
+                          parkingId: spot.facility_id,
                           parkingName: spot.name,
-                          pricePerHour: spot.price,
+                          pricePerHour: spot.price_per_hour.toString(),
                         }
                       });
                     }}
@@ -308,278 +381,65 @@ const SavedParking = () => {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Bottom Tabs */}
       <BottomTabs />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    backgroundColor: '#fff',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  categoriesSection: {
-    backgroundColor: '#fff',
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  categoriesLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 12,
-    paddingHorizontal: 20,
-  },
-  categories: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  categoryChipActive: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
-  },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  categoryTextActive: {
-    color: '#fff',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 40,
-  },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  emptyButton: {
-    backgroundColor: '#22C55E',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  emptyButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  parkingCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  parkingIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: '#F0FDF4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  parkingMainInfo: {
-    flex: 1,
-  },
-  parkingNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  parkingName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    flex: 1,
-  },
-  bookmarkButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  parkingMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 4,
-  },
-  metaDivider: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
-    marginHorizontal: 6,
-  },
-  metaText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginLeft: 4,
-  },
-  parkingAddress: {
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  categoryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  categoryBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginLeft: 4,
-  },
-  statDivider: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
-    marginHorizontal: 8,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#22C55E',
-  },
-  priceUnit: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginLeft: 2,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 12,
-  },
-  quickActionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#22C55E',
-    marginLeft: 6,
-  },
-  actionDivider: {
-    width: 1,
-    height: '100%',
-    backgroundColor: '#F3F4F6',
-  },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  header: { backgroundColor: '#fff', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  headerContent: { alignItems: 'center' },
+  title: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  subtitle: { fontSize: 14, color: '#6B7280' },
+  scrollContent: { paddingBottom: 20 },
+
+  // Categories
+  categoriesSection: { backgroundColor: '#fff', paddingTop: 16, paddingBottom: 12 },
+  categoriesLabel: { fontSize: 14, fontWeight: '600', color: '#6B7280', marginBottom: 12, paddingHorizontal: 20 },
+  categories: { paddingHorizontal: 20, gap: 8 },
+  categoryChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB' },
+  categoryChipActive: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
+  categoryText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
+  categoryTextActive: { color: '#fff' },
+
+  // Empty
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 40 },
+  emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  emptyButton: { backgroundColor: '#22C55E', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
+  emptyButtonText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+
+  // List
+  listContainer: { paddingHorizontal: 20, paddingTop: 16 },
+  parkingCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+
+  // Card Header
+  cardHeader: { flexDirection: 'row', marginBottom: 12 },
+  parkingIconContainer: { width: 56, height: 56, borderRadius: 14, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  parkingMainInfo: { flex: 1 },
+  parkingNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  parkingName: { fontSize: 16, fontWeight: '700', color: '#111827', flex: 1 },
+  bookmarkButton: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  parkingAddress: { fontSize: 13, color: '#9CA3AF', marginBottom: 6 },
+  availabilityRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  availabilityDot: { width: 8, height: 8, borderRadius: 4 },
+  availabilityText: { fontSize: 12, fontWeight: '500', color: '#6B7280' },
+
+  // Card Footer
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  categoryBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: '#F9FAFB', gap: 4 },
+  categoryBadgeText: { fontSize: 12, fontWeight: '600' },
+  priceContainer: { flexDirection: 'row', alignItems: 'baseline' },
+  price: { fontSize: 18, fontWeight: '700', color: '#22C55E' },
+  priceUnit: { fontSize: 12, fontWeight: '500', color: '#6B7280', marginLeft: 2 },
+
+  // Quick Actions
+  quickActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
+  quickActionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, gap: 6 },
+  quickActionText: { fontSize: 14, fontWeight: '600', color: '#22C55E' },
+  actionDivider: { width: 1, height: '100%', backgroundColor: '#F3F4F6' },
 });
 
 export default SavedParking;

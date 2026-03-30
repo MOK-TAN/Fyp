@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Modal,
-    ScrollView,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { supabase } from '../../../lib/supabase';
 import { styles } from './[id].styles';
 
 type Slot = {
@@ -17,9 +21,15 @@ type Slot = {
   section: string;
   is_available: boolean;
   is_occupied: boolean;
+  current_booking_id: string | null;
   current_booking?: {
+    booking_reference: string;
     vehicle_plate: string;
-    time_left: string;
+    customer_name: string;
+    start_time: string;
+    end_time: string;
+    booking_date: string;
+    total_amount: number;
   };
 };
 
@@ -27,99 +37,256 @@ export default function SlotManager() {
   const params = useLocalSearchParams();
   const facilityId = params.id as string;
 
-  const [loading, setLoading] = useState(false);
-  const [facilityName, setFacilityName] = useState('Thamel Central Parking');
-  const [totalSlots, setTotalSlots] = useState(120);
-  const [occupiedSlots, setOccupiedSlots] = useState(84);
-  const [selectedFloor, setSelectedFloor] = useState('A');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [facilityName, setFacilityName] = useState('');
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [sections, setSections] = useState<string[]>([]);
+  const [selectedSection, setSelectedSection] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
-  // Dummy slots data - will be replaced with Supabase later
-  const [slots, setSlots] = useState<Slot[]>([
-    { id: '1', slot_number: 'A1', section: 'A', is_available: false, is_occupied: true },
-    { id: '2', slot_number: 'A2', section: 'A', is_available: false, is_occupied: true },
-    { id: '3', slot_number: 'A3', section: 'A', is_available: true, is_occupied: false },
-    { id: '4', slot_number: 'A4', section: 'A', is_available: false, is_occupied: false },
-    { id: '5', slot_number: 'B1', section: 'A', is_available: false, is_occupied: true },
-    { id: '6', slot_number: 'B2', section: 'A', is_available: false, is_occupied: true },
-    { id: '7', slot_number: 'B3', section: 'A', is_available: false, is_occupied: false },
-    { id: '8', slot_number: 'B4', section: 'A', is_available: true, is_occupied: false },
-    { id: '9', slot_number: 'C1', section: 'A', is_available: true, is_occupied: false },
-    { id: '10', slot_number: 'C2', section: 'A', is_available: false, is_occupied: true },
-    { id: '11', slot_number: 'C3', section: 'A', is_available: true, is_occupied: false },
-    { id: '12', slot_number: 'C4', section: 'A', is_available: true, is_occupied: false },
-    { id: '13', slot_number: 'D1', section: 'A', is_available: false, is_occupied: true },
-    { id: '14', slot_number: 'D2', section: 'A', is_available: false, is_occupied: true },
-    { id: '15', slot_number: 'D3', section: 'A', is_available: true, is_occupied: false },
-    { id: '16', slot_number: 'D4', section: 'A', is_available: true, is_occupied: false },
-  ]);
+  useEffect(() => {
+    fetchFacilityData();
+  }, [facilityId]);
 
-  const availableSlots = totalSlots - occupiedSlots;
-  const occupancyPercentage = Math.round((occupiedSlots / totalSlots) * 100);
+  const fetchFacilityData = async () => {
+    try {
+      setLoading(true);
 
-  const handleSlotPress = (slot: Slot) => {
-    setSelectedSlot({
-      ...slot,
-      current_booking: slot.is_occupied ? {
-        vehicle_plate: 'BA-1-PA-1234',
-        time_left: '45m',
-      } : undefined,
-    });
+      // Get facility name
+      const { data: facility } = await supabase
+        .from('parking_facilities')
+        .select('name')
+        .eq('id', facilityId)
+        .single();
+
+      if (facility) {
+        setFacilityName(facility.name);
+      }
+
+      // Get all slots for this facility
+      const { data: slotsData, error } = await supabase
+        .from('parking_slots')
+        .select('*')
+        .eq('facility_id', facilityId)
+        .order('slot_number', { ascending: true });
+
+      if (error) throw error;
+
+      if (slotsData) {
+        setSlots(slotsData);
+
+        // Extract unique sections
+        const uniqueSections = [...new Set(slotsData.map(s => s.section || 'A'))].sort();
+        setSections(uniqueSections);
+        if (uniqueSections.length > 0 && !selectedSection) {
+          setSelectedSection(uniqueSections[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching facility data:', error);
+      Alert.alert('Error', 'Failed to load slots');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchFacilityData();
+  };
+
+  const handleSlotPress = async (slot: Slot) => {
+    if (slot.is_occupied && slot.current_booking_id) {
+      // Fetch real booking details for this slot
+      try {
+        const { data: booking } = await supabase
+          .from('bookings')
+          .select(`
+            booking_reference,
+            start_time,
+            end_time,
+            booking_date,
+            total_amount,
+            vehicles (plate_number),
+            profiles (full_name)
+          `)
+          .eq('id', slot.current_booking_id)
+          .single();
+
+        if (booking) {
+          setSelectedSlot({
+            ...slot,
+            current_booking: {
+              booking_reference: (booking as any).booking_reference,
+              vehicle_plate: (booking as any).vehicles?.plate_number || 'N/A',
+              customer_name: (booking as any).profiles?.full_name || 'Guest',
+              start_time: (booking as any).start_time,
+              end_time: (booking as any).end_time,
+              booking_date: (booking as any).booking_date,
+              total_amount: (booking as any).total_amount,
+            },
+          });
+        } else {
+          setSelectedSlot(slot);
+        }
+      } catch (error) {
+        console.error('Error fetching booking:', error);
+        setSelectedSlot(slot);
+      }
+    } else {
+      setSelectedSlot(slot);
+    }
+
     setShowSlotModal(true);
   };
 
-  const handleWalkInBooking = () => {
-    // Navigate to walk-in booking form
-    // router.push('/parking-owner/walk-in');
+  const handleReleaseSlot = async () => {
+    if (!selectedSlot) return;
+
+    Alert.alert(
+      'Release Slot',
+      `Are you sure you want to release slot ${selectedSlot.slot_number}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Release',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Update slot in DB
+              const { error: slotError } = await supabase
+                .from('parking_slots')
+                .update({
+                  is_available: true,
+                  is_occupied: false,
+                  current_booking_id: null,
+                })
+                .eq('id', selectedSlot.id);
+
+              if (slotError) throw slotError;
+
+              // If there was a booking, mark it as completed
+              if (selectedSlot.current_booking_id) {
+                await supabase
+                  .from('bookings')
+                  .update({
+                    booking_status: 'completed',
+                    is_timer_active: false,
+                    actual_end_time: new Date().toISOString(),
+                  })
+                  .eq('id', selectedSlot.current_booking_id);
+              }
+
+              // Update local state
+              setSlots(prev =>
+                prev.map(s =>
+                  s.id === selectedSlot.id
+                    ? { ...s, is_available: true, is_occupied: false, current_booking_id: null }
+                    : s
+                )
+              );
+
+              setShowSlotModal(false);
+              Alert.alert('Success', `Slot ${selectedSlot.slot_number} released`);
+            } catch (error: any) {
+              console.error('Release error:', error);
+              Alert.alert('Error', 'Failed to release slot');
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const handleReleaseSlot = () => {
-    if (selectedSlot) {
-      // TODO: Release slot in database
-      const updatedSlots = slots.map(s =>
-        s.id === selectedSlot.id
-          ? { ...s, is_available: true, is_occupied: false }
-          : s
+  const handleToggleAvailability = async () => {
+    if (!selectedSlot || selectedSlot.is_occupied) return;
+
+    try {
+      const newAvailability = !selectedSlot.is_available;
+
+      const { error } = await supabase
+        .from('parking_slots')
+        .update({ is_available: newAvailability })
+        .eq('id', selectedSlot.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setSlots(prev =>
+        prev.map(s =>
+          s.id === selectedSlot.id
+            ? { ...s, is_available: newAvailability }
+            : s
+        )
       );
-      setSlots(updatedSlots);
-      setOccupiedSlots(prev => prev - 1);
-      setShowSlotModal(false);
+
+      setSelectedSlot(prev => prev ? { ...prev, is_available: newAvailability } : null);
+
+      Alert.alert('Success', `Slot ${selectedSlot.slot_number} ${newAvailability ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.error('Toggle error:', error);
+      Alert.alert('Error', 'Failed to update slot');
     }
   };
 
-  const handleNotifyUser = () => {
-    // TODO: Send notification to user
-    alert('Notification sent to user');
-    setShowSlotModal(false);
+  const formatTime = (time: string) => {
+    const parts = time.split(':');
+    const hours = parseInt(parts[0]);
+    const minutes = parts[1];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes} ${ampm}`;
   };
+
+  const calculateTimeLeft = (endTime: string, bookingDate: string) => {
+    const end = new Date(`${bookingDate}T${endTime}`);
+    const now = new Date();
+    const diffMs = end.getTime() - now.getTime();
+
+    if (diffMs <= 0) return 'Expired';
+
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `${diffMins}m left`;
+
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `${hours}h ${mins}m left`;
+  };
+
+  // Filter slots by selected section
+  const filteredSlots = slots.filter(s => (s.section || 'A') === selectedSection);
+
+  // Calculate stats from real data
+  const totalSlots = slots.length;
+  const occupiedSlots = slots.filter(s => s.is_occupied).length;
+  const availableSlots = slots.filter(s => s.is_available && !s.is_occupied).length;
+  const occupancyPercentage = totalSlots > 0 ? Math.round((occupiedSlots / totalSlots) * 100) : 0;
 
   const getSlotStyle = (slot: Slot) => {
-    if (!slot.is_available && !slot.is_occupied) {
-      return styles.slotInactive; // Gray - Inactive
-    }
-    if (slot.is_occupied) {
-      return styles.slotOccupied; // Red - Occupied
-    }
-    if (selectedSlot?.id === slot.id) {
-      return styles.slotSelected; // Blue - Selected
-    }
-    return styles.slotAvailable; // Green - Available
+    if (!slot.is_available && !slot.is_occupied) return styles.slotInactive;
+    if (slot.is_occupied) return styles.slotOccupied;
+    if (selectedSlot?.id === slot.id) return styles.slotSelected;
+    return styles.slotAvailable;
   };
 
   const getSlotBorderStyle = (slot: Slot) => {
-    if (!slot.is_available && !slot.is_occupied) {
-      return styles.slotBorderInactive;
-    }
-    if (slot.is_occupied) {
-      return styles.slotBorderOccupied;
-    }
-    if (selectedSlot?.id === slot.id) {
-      return styles.slotBorderSelected;
-    }
+    if (!slot.is_available && !slot.is_occupied) return styles.slotBorderInactive;
+    if (slot.is_occupied) return styles.slotBorderOccupied;
+    if (selectedSlot?.id === slot.id) return styles.slotBorderSelected;
     return styles.slotBorderAvailable;
   };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' }}>
+        <ActivityIndicator size="large" color="#22C55E" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -132,14 +299,20 @@ export default function SlotManager() {
           <Text style={styles.headerTitle}>Slot Manager</Text>
           <Text style={styles.headerSubtitle}>{facilityName}</Text>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="notifications-outline" size={24} color="#111827" />
+        <TouchableOpacity onPress={onRefresh}>
+          <Ionicons name="refresh-outline" size={24} color="#111827" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22C55E" />
+        }
+      >
         {/* Walk-in Booking Button */}
-        <TouchableOpacity style={styles.walkInButton} onPress={handleWalkInBooking}>
+        <TouchableOpacity style={styles.walkInButton}>
           <Ionicons name="add-circle" size={24} color="#FFFFFF" />
           <Text style={styles.walkInButtonText}>WALK-IN BOOKING</Text>
         </TouchableOpacity>
@@ -152,16 +325,12 @@ export default function SlotManager() {
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>OCCUPIED</Text>
-            <Text style={[styles.statValue, { color: '#EF4444' }]}>
-              {occupiedSlots}
-            </Text>
+            <Text style={[styles.statValue, { color: '#EF4444' }]}>{occupiedSlots}</Text>
             <Text style={styles.statPercentage}>{occupancyPercentage}%</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>AVAILABLE</Text>
-            <Text style={[styles.statValue, { color: '#22C55E' }]}>
-              {availableSlots}
-            </Text>
+            <Text style={[styles.statValue, { color: '#22C55E' }]}>{availableSlots}</Text>
           </View>
         </View>
 
@@ -185,32 +354,29 @@ export default function SlotManager() {
           </View>
         </View>
 
-        {/* Floor Selector */}
-        <View style={styles.floorSelector}>
-          <Text style={styles.floorLabel}>FLOOR A</Text>
-          <View style={styles.floorTabs}>
-            <TouchableOpacity
-              style={[styles.floorTab, selectedFloor === 'A' && styles.floorTabActive]}
-              onPress={() => setSelectedFloor('A')}
-            >
-              <Text style={[styles.floorTabText, selectedFloor === 'A' && styles.floorTabTextActive]}>
-                Floor A
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.floorTab, selectedFloor === 'B' && styles.floorTabActive]}
-              onPress={() => setSelectedFloor('B')}
-            >
-              <Text style={[styles.floorTabText, selectedFloor === 'B' && styles.floorTabTextActive]}>
-                Floor B
-              </Text>
-            </TouchableOpacity>
+        {/* Section Selector (dynamic from DB) */}
+        {sections.length > 1 && (
+          <View style={styles.floorSelector}>
+            <Text style={styles.floorLabel}>SECTION</Text>
+            <View style={styles.floorTabs}>
+              {sections.map((section) => (
+                <TouchableOpacity
+                  key={section}
+                  style={[styles.floorTab, selectedSection === section && styles.floorTabActive]}
+                  onPress={() => setSelectedSection(section)}
+                >
+                  <Text style={[styles.floorTabText, selectedSection === section && styles.floorTabTextActive]}>
+                    Section {section}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Slot Grid */}
         <View style={styles.slotGrid}>
-          {slots.map((slot) => (
+          {filteredSlots.map((slot) => (
             <TouchableOpacity
               key={slot.id}
               style={[styles.slotBox, getSlotStyle(slot), getSlotBorderStyle(slot)]}
@@ -220,6 +386,7 @@ export default function SlotManager() {
                 styles.slotText,
                 slot.is_occupied && styles.slotTextOccupied,
                 selectedSlot?.id === slot.id && styles.slotTextSelected,
+                !slot.is_available && !slot.is_occupied && { color: '#9CA3AF' },
               ]}>
                 {slot.slot_number}
               </Text>
@@ -227,11 +394,12 @@ export default function SlotManager() {
           ))}
         </View>
 
-        {/* Save Layout Button */}
-        <TouchableOpacity style={styles.saveButton}>
-          <Ionicons name="save-outline" size={20} color="#6B7280" />
-          <Text style={styles.saveButtonText}>SAVE LAYOUT CHANGES</Text>
-        </TouchableOpacity>
+        {filteredSlots.length === 0 && (
+          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+            <Ionicons name="grid-outline" size={48} color="#D1D5DB" />
+            <Text style={{ color: '#9CA3AF', marginTop: 12 }}>No slots in this section</Text>
+          </View>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -266,7 +434,7 @@ export default function SlotManager() {
                     styles.modalSlotStatus,
                     selectedSlot?.is_occupied ? { color: '#EF4444' } : { color: '#22C55E' },
                   ]}>
-                    {selectedSlot?.is_occupied ? 'OCCUPIED' : 'AVAILABLE'}
+                    {selectedSlot?.is_occupied ? 'OCCUPIED' : selectedSlot?.is_available ? 'AVAILABLE' : 'INACTIVE'}
                   </Text>
                 </View>
               </View>
@@ -275,27 +443,38 @@ export default function SlotManager() {
               </TouchableOpacity>
             </View>
 
-            {/* Modal Body */}
+            {/* Modal Body — Occupied Slot */}
             {selectedSlot?.is_occupied && selectedSlot.current_booking ? (
               <>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>BOOKING REF</Text>
+                  <Text style={styles.modalValue}>{selectedSlot.current_booking.booking_reference}</Text>
+                </View>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>CUSTOMER</Text>
+                  <Text style={styles.modalValue}>{selectedSlot.current_booking.customer_name}</Text>
+                </View>
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>VEHICLE</Text>
                   <Text style={styles.modalValue}>{selectedSlot.current_booking.vehicle_plate}</Text>
                 </View>
                 <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>TIME LEFT</Text>
-                  <Text style={[styles.modalValue, { color: '#22C55E', fontWeight: '700' }]}>
-                    {selectedSlot.current_booking.time_left}
+                  <Text style={styles.modalLabel}>TIME</Text>
+                  <Text style={styles.modalValue}>
+                    {formatTime(selectedSlot.current_booking.start_time)} - {formatTime(selectedSlot.current_booking.end_time)}
                   </Text>
                 </View>
                 <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>MAINTENANCE MODE</Text>
-                  <Switch
-                    value={maintenanceMode}
-                    onValueChange={setMaintenanceMode}
-                    trackColor={{ false: '#D1D5DB', true: '#86EFAC' }}
-                    thumbColor={maintenanceMode ? '#22C55E' : '#F3F4F6'}
-                  />
+                  <Text style={styles.modalLabel}>TIME LEFT</Text>
+                  <Text style={[styles.modalValue, { color: '#22C55E', fontWeight: '700' }]}>
+                    {calculateTimeLeft(selectedSlot.current_booking.end_time, selectedSlot.current_booking.booking_date)}
+                  </Text>
+                </View>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>AMOUNT</Text>
+                  <Text style={[styles.modalValue, { fontWeight: '700' }]}>
+                    Rs {selectedSlot.current_booking.total_amount}
+                  </Text>
                 </View>
 
                 {/* Action Buttons */}
@@ -303,17 +482,36 @@ export default function SlotManager() {
                   <TouchableOpacity style={styles.releaseButton} onPress={handleReleaseSlot}>
                     <Text style={styles.releaseButtonText}>RELEASE SLOT</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.notifyButton} onPress={handleNotifyUser}>
+                  <TouchableOpacity style={styles.notifyButton} onPress={() => {
+                    Alert.alert('Notification Sent', 'Customer has been notified');
+                    setShowSlotModal(false);
+                  }}>
                     <Text style={styles.notifyButtonText}>NOTIFY USER</Text>
                   </TouchableOpacity>
                 </View>
               </>
             ) : (
+              /* Modal Body — Available/Inactive Slot */
               <View style={styles.emptySlot}>
-                <Text style={styles.emptySlotText}>This slot is available</Text>
-                <TouchableOpacity style={styles.walkInSmallButton} onPress={handleWalkInBooking}>
-                  <Text style={styles.walkInSmallButtonText}>Book for Walk-in</Text>
-                </TouchableOpacity>
+                <Text style={styles.emptySlotText}>
+                  {selectedSlot?.is_available ? 'This slot is available' : 'This slot is inactive'}
+                </Text>
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>MAINTENANCE MODE</Text>
+                  <Switch
+                    value={!selectedSlot?.is_available}
+                    onValueChange={handleToggleAvailability}
+                    trackColor={{ false: '#D1D5DB', true: '#86EFAC' }}
+                    thumbColor={!selectedSlot?.is_available ? '#22C55E' : '#F3F4F6'}
+                  />
+                </View>
+
+                {selectedSlot?.is_available && (
+                  <TouchableOpacity style={styles.walkInSmallButton}>
+                    <Text style={styles.walkInSmallButtonText}>Book for Walk-in</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>

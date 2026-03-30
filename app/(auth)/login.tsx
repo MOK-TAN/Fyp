@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,60 +16,118 @@ import { supabase } from '../../lib/supabase';
 import { styles } from './login.styles';
 
 export default function LoginScreen() {
-  const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const validateEmail = (text: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(text);
+  };
 
   const handleLogin = async () => {
+    // Reset errors
+    setEmailError('');
+    setPasswordError('');
+
     // Validation
-    if (!phone || !password) {
-      Alert.alert('Error', 'Please enter both phone and password');
-      return;
+    let hasError = false;
+
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      hasError = true;
+    } else if (!validateEmail(email.trim())) {
+      setEmailError('Enter a valid email address');
+      hasError = true;
     }
 
-    if (phone.length !== 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
-      return;
+    if (!password) {
+      setPasswordError('Password is required');
+      hasError = true;
     }
+
+    if (hasError) return;
 
     setLoading(true);
 
     try {
-      // Supabase Auth uses email, so we format phone as email
-      const email = `${phone}@parkease.com`;
-
+      // Supabase sign in with email
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
+        email: email.trim().toLowerCase(),
         password: password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          Alert.alert('Login Failed', 'Incorrect email or password. Please try again.');
+        } else if (error.message.includes('Email not confirmed')) {
+          Alert.alert('Email Not Verified', 'Please check your email and verify your account before logging in.');
+        } else if (error.message.includes('rate limit')) {
+          Alert.alert('Too Many Attempts', 'Please wait a moment and try again.');
+        } else {
+          Alert.alert('Login Failed', error.message);
+        }
+        return;
+      }
 
       if (data.session) {
-        // Store session
+        // Store session token
         await AsyncStorage.setItem('auth_token', data.session.access_token);
-        await AsyncStorage.setItem('user_phone', phone);
 
-        // Navigate to dashboard
-        router.replace('/(user)/(tabs)');
+        // Get user role from profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role, full_name')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+          // Default to user if profile not found
+          router.replace('/(user)/(tabs)');
+          return;
+        }
+
+        // Route based on role
+        switch (profile?.role) {
+          case 'parking_owner':
+            router.replace('/(parking-owner)/(tabs)');
+            break;
+          case 'land_owner':
+            router.replace('/(land-owner)/(tabs)');
+            break;
+          case 'admin':
+            router.replace('/(admin)');
+            break;
+          default:
+            router.replace('/(user)/(tabs)');
+            break;
+        }
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert(
-        'Login Failed',
-        error.message || 'Invalid phone or password. Please try again.'
-      );
+      Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   // Quick test login
-  const handleQuickLogin = () => {
-    setPhone('9803124221');
-    setPassword('password123');
+  const handleQuickLoginUsers = () => {
+    setEmail('user3@hello.com');
+    setPassword('Hello989878');
+    setEmailError('');
+    setPasswordError('');
+  };
+
+  const handleQuickLoginPo = () => {
+    setEmail('po1@hello.com');
+    setPassword('Pa12345');
+    setEmailError('');
+    setPasswordError('');
   };
 
   return (
@@ -89,37 +147,58 @@ export default function LoginScreen() {
 
         {/* Login Form */}
         <View style={styles.form}>
-          {/* Phone Input */}
+          {/* Email Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.inputContainer}>
-              <View style={styles.phonePrefix}>
-                <Text style={styles.phonePrefixText}>+977</Text>
-              </View>
+            <Text style={styles.label}>Email</Text>
+            <View style={[styles.inputContainer, emailError ? { borderColor: '#DC2626' } : {}]}>
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color={emailError ? '#DC2626' : '#9CA3AF'}
+                style={{ paddingLeft: 16 }}
+              />
               <TextInput
                 style={styles.input}
-                placeholder="9803124221"
+                placeholder="Enter your email"
                 placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-                maxLength={10}
-                value={phone}
-                onChangeText={setPhone}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (emailError) setEmailError('');
+                }}
                 editable={!loading}
               />
             </View>
+            {emailError ? (
+              <Text style={{ color: '#DC2626', fontSize: 12, marginTop: 4, paddingLeft: 4 }}>
+                {emailError}
+              </Text>
+            ) : null}
           </View>
 
           {/* Password Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, passwordError ? { borderColor: '#DC2626' } : {}]}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color={passwordError ? '#DC2626' : '#9CA3AF'}
+                style={{ paddingLeft: 16 }}
+              />
               <TextInput
                 style={[styles.input, styles.passwordInput]}
                 placeholder="Enter your password"
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry={!showPassword}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (passwordError) setPasswordError('');
+                }}
                 editable={!loading}
               />
               <TouchableOpacity
@@ -133,10 +212,18 @@ export default function LoginScreen() {
                 />
               </TouchableOpacity>
             </View>
+            {passwordError ? (
+              <Text style={{ color: '#DC2626', fontSize: 12, marginTop: 4, paddingLeft: 4 }}>
+                {passwordError}
+              </Text>
+            ) : null}
           </View>
 
           {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => router.push('/(auth)/forgot-password')}
+          >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
@@ -163,17 +250,28 @@ export default function LoginScreen() {
           {/* Quick Test Login */}
           <TouchableOpacity
             style={styles.testButton}
-            onPress={handleQuickLogin}
+            onPress={handleQuickLoginUsers}
             disabled={loading}
           >
             <Ionicons name="flash" size={20} color="#22C55E" />
-            <Text style={styles.testButtonText}>Fill Test Credentials</Text>
+            <Text style={styles.testButtonText}>Fill Test users</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={handleQuickLoginPo}
+            disabled={loading}
+          >
+            <Ionicons name="flash" size={20} color="#22C55E" />
+            <Text style={styles.testButtonText}>Fill Test parking owner</Text>
           </TouchableOpacity>
 
           {/* Sign Up Link */}
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/signup')}
+            >
               <Text style={styles.signupLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>

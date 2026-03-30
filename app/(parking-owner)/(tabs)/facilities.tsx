@@ -2,13 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 import { styles } from './facilities.styles';
@@ -63,13 +63,14 @@ export default function Facilities() {
   };
 
   const handleAddFacility = () => {
-    // TODO: Navigate to add facility screen
-    // router.push('/parking-owner/facility/add');
+    router.push('/(parking-owner)/facility/add');
   };
 
   const handleManageFacility = (facilityId: string) => {
-    // TODO: Navigate to facility management
-    // router.push(`/parking-owner/facility/${facilityId}`);
+    router.push({
+      pathname: '/(parking-owner)/facility/[id]',
+      params: { id: facilityId },
+    });
   };
 
   const handleEditFacility = (facilityId: string) => {

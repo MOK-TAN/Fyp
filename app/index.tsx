@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Dimensions, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Dimensions, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -35,7 +35,9 @@ export default function WelcomeScreen() {
 
        {/* TEMP TEST BUTTON */}
 
-        <TouchableOpacity
+       
+
+        {/* <TouchableOpacity
         style={{
           flex: 1,
           backgroundColor: '#22C55E',
@@ -55,7 +57,7 @@ export default function WelcomeScreen() {
         }}
       >
         <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>1.Date</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
 
       {/* Swipe Area - Only for Image Section */}
@@ -202,6 +204,7 @@ const styles = StyleSheet.create({
   },
 });
 
+//before
 
 //work
 // import { router } from "expo-router";
