@@ -39,11 +39,18 @@
           }
         }
       ],
-      "react-native-map-link"
+      "react-native-map-link",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9f7730be-3ae3-49c5-9495-41558c9fe275"
+      }
     }
   }
 }
