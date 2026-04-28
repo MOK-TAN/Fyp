@@ -137,6 +137,57 @@ export default function PaymentSelection() {
         // Booking was created but slot update failed — not critical, log it
       }
 
+      // 4.5. Send notifications
+      try {
+        const { data: facility } = await supabase
+          .from('parking_facilities')
+          .select('owner_id, name')
+          .eq('id', parkingId)
+          .single();
+
+        if (facility) {
+          const isPaid = selectedPayment !== 'cash';
+          const paymentLabel = isPaid ? `${selectedPayment.toUpperCase()} (Paid)` : 'Cash (Pending)';
+
+          await supabase.from('notifications').insert([
+            // User: booking confirmed
+            {
+              user_id: userId,
+              type: 'booking_confirmed',
+              title: 'Booking Confirmed',
+              message: `Your booking at ${facility.name} is confirmed. Ref: ${bookingReference}`,
+              booking_id: booking.id,
+              facility_id: parkingId,
+            },
+            // Owner: new booking
+            {
+              user_id: facility.owner_id,
+              type: 'booking_confirmed',
+              title: 'New Booking Received',
+              message: `New booking at ${facility.name} for slot ${slotId}. Ref: ${bookingReference}`,
+              booking_id: booking.id,
+              facility_id: parkingId,
+            },
+            // Owner: payment status
+            {
+              user_id: facility.owner_id,
+              type: isPaid ? 'payment_success' : 'payment_failed',
+              title: isPaid ? 'Payment Received' : 'Payment Pending',
+              message: `Payment for ${bookingReference}: ${paymentLabel}. Amount: Rs ${totalPrice}`,
+              booking_id: booking.id,
+              facility_id: parkingId,
+              data: {
+                payment_method: selectedPayment,
+                payment_status: isPaid ? 'paid' : 'pending',
+                amount: parseFloat(totalPrice),
+              },
+            },
+          ]);
+        }
+      } catch (notifError) {
+        console.error('Notification error:', notifError);
+      }
+
       // 5. Navigate to confirmation with real data
       setIsProcessing(false);
 

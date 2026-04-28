@@ -333,61 +333,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  calloutContainer: {
-  backgroundColor: 'white',
-  padding: 15,
-  borderRadius: 12,
-  width: 260,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.25,
-  shadowRadius: 4,
-  elevation: 5,
-},
-calloutTitle: {
-  fontSize: 16,
-  fontWeight: '700',
-  marginBottom: 4,
-},
-calloutAddress: {
-  color: '#6B7280',
-  marginBottom: 8,
-},
-calloutInfo: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginBottom: 12,
-},
-calloutPrice: {
-  fontWeight: '600',
-},
-navigateButton: {
-  backgroundColor: '#22C55E',
-  paddingVertical: 12,
-  borderRadius: 8,
-  alignItems: 'center',
-},
-navigateButtonText: {
-  color: 'white',
-  fontWeight: '600',
-  fontSize: 15,
-},
-myLocationButton: {
-  position: 'absolute',
-  bottom: 20,
-  right: 20,
-  backgroundColor: '#fff',
-  width: 50,
-  height: 50,
-  borderRadius: 25,
-  justifyContent: 'center',
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.25,
-  shadowRadius: 4,
-  elevation: 5,
-},
+  
   // ... rest of your styles remain the same
    container: { flex: 1, backgroundColor: '#F9FAFB' },
   header: { backgroundColor: '#fff', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
