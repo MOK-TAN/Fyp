@@ -23,6 +23,10 @@ type RecentActivity = {
 };
 
 export default function OwnerDashboard() {
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [ownerName, setOwnerName] = useState('Owner');
@@ -46,6 +50,15 @@ export default function OwnerDashboard() {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Get unread notifications count
+const { count: unreadNotifCount } = await supabase
+  .from('notifications')
+  .select('*', { count: 'exact', head: true })
+  .eq('user_id', user.id)
+  .eq('is_read', false);
+
+setUnreadCount(unreadNotifCount || 0);
 
       // Get owner name
       const { data: profile } = await supabase
@@ -187,7 +200,7 @@ export default function OwnerDashboard() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <View>
           <Text style={styles.headerGreeting}>Welcome back,</Text>
           <Text style={styles.headerTitle}>{ownerName}</Text>
@@ -197,7 +210,46 @@ export default function OwnerDashboard() {
             <Ionicons name="person" size={20} color="#6B7280" />
           </View>
         </TouchableOpacity>
+      </View> */}
+
+      {/* Header */}
+<View style={styles.header}>
+  <View>
+    <Text style={styles.headerGreeting}>Welcome back,</Text>
+    <Text style={styles.headerTitle}>{ownerName}</Text>
+  </View>
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+    <TouchableOpacity
+      style={{ position: 'relative', padding: 8 }}
+      onPress={() => router.push('/(parking-owner)/notifications')}
+    >
+      <Ionicons name="notifications-outline" size={24} color="#111827" />
+      {unreadCount > 0 && (
+        <View style={{
+          position: 'absolute',
+          top: 2,
+          right: 2,
+          backgroundColor: '#EF4444',
+          borderRadius: 10,
+          minWidth: 18,
+          height: 18,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: 4,
+        }}>
+          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+    <TouchableOpacity style={styles.profileButton}>
+      <View style={styles.profileCircle}>
+        <Ionicons name="person" size={20} color="#6B7280" />
       </View>
+    </TouchableOpacity>
+  </View>
+</View>
 
       <ScrollView
         style={styles.content}

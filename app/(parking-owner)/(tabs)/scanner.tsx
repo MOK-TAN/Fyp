@@ -496,8 +496,16 @@ export default function Scanner() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' },
-  header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+
+  container: { flex: 1, backgroundColor: '#000000' }, // remove justifyContent and alignItems
+header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: 'rgba(0,0,0,0.8)', width: '100%' },
+footer: { paddingHorizontal: 20, paddingVertical: 20, backgroundColor: 'rgba(0,0,0,0.8)', width: '100%' },
+
+
+
+  // container: { flex: 1, backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' },
+  // header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+  // footer: { paddingHorizontal: 20, paddingVertical: 20, backgroundColor: 'rgba(0, 0, 0, 0.8)' },
   headerTitle: { fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
   headerSubtitle: { fontSize: 14, color: '#D1D5DB' },
   cameraContainer: { flex: 1, position: 'relative', width: '100%' },
@@ -511,7 +519,6 @@ const styles = StyleSheet.create({
   instructions: { position: 'absolute', bottom: 60, left: 0, right: 0, alignItems: 'center' },
   verifyingContainer: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(0, 0, 0, 0.7)', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   instructionText: { fontSize: 16, color: '#FFFFFF', fontWeight: '600', backgroundColor: 'rgba(0, 0, 0, 0.7)', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
-  footer: { paddingHorizontal: 20, paddingVertical: 20, backgroundColor: 'rgba(0, 0, 0, 0.8)' },
   footerButtons: { flexDirection: 'row', gap: 12 },
   galleryButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 12, paddingVertical: 16, borderWidth: 1, borderColor: '#22C55E', gap: 8 },
   galleryButtonText: { fontSize: 14, fontWeight: '600', color: '#22C55E' },

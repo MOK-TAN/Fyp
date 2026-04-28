@@ -1,5 +1,7 @@
+//before 2
+
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +20,8 @@ type BookingStatus = 'all' | 'confirmed' | 'active' | 'completed' | 'cancelled';
 type Booking = {
   id: string;
   booking_reference: string;
+   facility_id: string; 
+   user_id: string | null;
   facility_name: string;
   customer_name: string;
   vehicle_plate: string;
@@ -29,6 +33,68 @@ type Booking = {
   payment_status: string;
   booking_status: string;
   slot_id: string;
+  actual_start_time: string | null;
+};
+
+// ─── Live Timer Component ───────────────────────────────────────────────────
+function LiveTimer({ actualStartTime }: { actualStartTime: string | null }) {
+  const [elapsed, setElapsed] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const startMs = actualStartTime
+      ? new Date(actualStartTime).getTime()
+      : Date.now();
+
+    const tick = () => {
+      const now = Date.now();
+      setElapsed(Math.floor((now - startMs) / 1000));
+    };
+
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [actualStartTime]);
+
+  const hours = Math.floor(elapsed / 3600);
+  const minutes = Math.floor((elapsed % 3600) / 60);
+  const seconds = elapsed % 60;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const display = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+
+  return (
+    <View style={timerStyles.container}>
+      <Ionicons name="time-outline" size={16} color="#22C55E" />
+      <Text style={timerStyles.text}>{display}</Text>
+    </View>
+  );
+}
+
+const timerStyles = {
+  container: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+    alignSelf: 'flex-start' as const,
+    marginBottom: 10,
+  },
+  text: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#15803D',
+    fontVariant: ['tabular-nums'] as any,
+    letterSpacing: 1,
+  },
 };
 
 export default function Bookings() {
@@ -68,20 +134,23 @@ export default function Bookings() {
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          id,
-          booking_reference,
-          booking_date,
-          start_time,
-          end_time,
-          total_amount,
-          payment_status,
-          booking_status,
-          slot_id,
-          parking_facilities (name),
-          profiles (full_name),
-          vehicles (plate_number),
-          parking_slots (slot_number)
-        `)
+  id,
+  booking_reference,
+  user_id,
+  facility_id,
+  booking_date,
+  start_time,
+  end_time,
+  total_amount,
+  payment_status,
+  booking_status,
+  slot_id,
+  actual_start_time,
+  parking_facilities (name),
+  profiles (full_name),
+  vehicles (plate_number),
+  parking_slots (slot_number)
+`)
         .in('facility_id', facilityIds)
         .order('created_at', { ascending: false });
 
@@ -89,8 +158,10 @@ export default function Bookings() {
 
       const formattedBookings: Booking[] = (data || []).map((b: any) => ({
         id: b.id,
-        booking_reference: b.booking_reference,
-        facility_name: b.parking_facilities?.name || 'Unknown',
+  booking_reference: b.booking_reference,
+  facility_id: b.facility_id,
+  user_id: b.user_id,
+  facility_name: b.parking_facilities?.name || 'Unknown',
         customer_name: b.profiles?.full_name || 'Guest',
         vehicle_plate: b.vehicles?.plate_number || 'N/A',
         slot_number: b.parking_slots?.slot_number || '-',
@@ -101,6 +172,7 @@ export default function Bookings() {
         payment_status: b.payment_status,
         booking_status: b.booking_status,
         slot_id: b.slot_id,
+        actual_start_time: b.actual_start_time || null,
       }));
 
       setBookings(formattedBookings);
@@ -139,6 +211,22 @@ export default function Bookings() {
                 .eq('id', booking.id);
 
               if (bookingError) throw bookingError;
+
+              // Notify the user their booking was cancelled (skip walk-in guests)
+              if (booking.user_id) {
+                try {
+                  await supabase.from('notifications').insert({
+                    user_id: booking.user_id,
+                    type: 'booking_cancelled',
+                    title: 'Booking Cancelled',
+                    message: `Your booking at ${booking.facility_name} (${booking.booking_reference}) has been cancelled by the parking owner.`,
+                    booking_id: booking.id,
+                    facility_id: booking.facility_id,
+                  });
+                } catch (notifError) {
+                  console.error('Notification error:', notifError);
+                }
+              }
 
               // Free up the slot
               const { error: slotError } = await supabase
@@ -182,12 +270,14 @@ export default function Bookings() {
           text: 'Activate',
           onPress: async () => {
             try {
+              const now = new Date().toISOString();
+
               const { error } = await supabase
                 .from('bookings')
                 .update({
                   booking_status: 'active',
                   is_timer_active: true,
-                  actual_start_time: new Date().toISOString(),
+                  actual_start_time: now,
                 })
                 .eq('id', booking.id);
 
@@ -196,7 +286,9 @@ export default function Bookings() {
               // Update local state
               setBookings(prev =>
                 prev.map(b =>
-                  b.id === booking.id ? { ...b, booking_status: 'active' } : b
+                  b.id === booking.id
+                    ? { ...b, booking_status: 'active', actual_start_time: now }
+                    : b
                 )
               );
 
@@ -429,15 +521,18 @@ export default function Bookings() {
                 </View>
               )}
 
-              {/* Cancel Button (only for active bookings) */}
+              {/* Live Timer + Cancel Button (only for active bookings) */}
               {booking.booking_status === 'active' && (
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => handleCancelBooking(booking)}
-                >
-                  <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
-                  <Text style={styles.cancelButtonText}>Cancel Booking</Text>
-                </TouchableOpacity>
+                <View>
+                  <LiveTimer actualStartTime={booking.actual_start_time} />
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => handleCancelBooking(booking)}
+                  >
+                    <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+                    <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           ))
