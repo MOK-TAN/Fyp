@@ -327,4 +327,13 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
+  input: {
+  borderWidth: 1,
+  borderColor: '#E5E7EB',
+  borderRadius: 12,
+  padding: 14,
+  fontSize: 16,
+  backgroundColor: '#FFFFFF',
+  marginBottom: 16,
+},
 });
