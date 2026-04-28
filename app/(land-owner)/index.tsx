@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { styles } from './styles';
@@ -29,13 +30,13 @@ export default function LandownerDashboard() {
           ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="add-circle" size={24} color="#fff" />
-            <Text style={styles.actionButtonText}>Add New Land Plot</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+  style={styles.actionButton}
+  onPress={() => router.push('/(landowner)/add-land-plot')}
+>
+  <Ionicons name="add-circle" size={24} color="#fff" />
+  <Text style={styles.actionButtonText}>Add New Land Plot</Text>
+</TouchableOpacity>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
