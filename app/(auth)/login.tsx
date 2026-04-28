@@ -1,3 +1,6 @@
+
+
+
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -97,7 +100,7 @@ export default function LoginScreen() {
             router.replace('/(parking-owner)/(tabs)');
             break;
           case 'land_owner':
-            router.replace('/(land-owner)/(tabs)');
+            router.replace('/(land-owner)');
             break;
           case 'admin':
             router.replace('/(admin)');
@@ -126,6 +129,21 @@ export default function LoginScreen() {
   const handleQuickLoginPo = () => {
     setEmail('po1@hello.com');
     setPassword('Pa12345');
+    setEmailError('');
+    setPasswordError('');
+  };
+
+
+  const handleQuickLoginLo = () => {
+    setEmail('lo1@hello.com');
+    setPassword('Lo12345');
+    setEmailError('');
+    setPasswordError('');
+  };
+
+  const handleQuickLoginAd = () => {
+    setEmail('admin@hello.com');
+    setPassword('Test123456');
     setEmailError('');
     setPasswordError('');
   };
@@ -265,6 +283,28 @@ export default function LoginScreen() {
             <Ionicons name="flash" size={20} color="#22C55E" />
             <Text style={styles.testButtonText}>Fill Test parking owner</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={handleQuickLoginLo}
+            disabled={loading}
+          >
+            <Ionicons name="flash" size={20} color="#22C55E" />
+            <Text style={styles.testButtonText}>Fill Test land owner</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={handleQuickLoginAd}
+            disabled={loading}
+          >
+            <Ionicons name="flash" size={20} color="#22C55E" />
+            <Text style={styles.testButtonText}>Fill Test admin</Text>
+          </TouchableOpacity>
+
+          
+
+
 
           {/* Sign Up Link */}
           <View style={styles.signupContainer}>
