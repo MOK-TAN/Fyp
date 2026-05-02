@@ -168,6 +168,15 @@ const Profile = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
+  style={styles.menuItem}
+  onPress={() => router.push('/(user)/vehicles')}
+>
+  <Ionicons name="car-outline" size={22} color="#111827" />
+  <Text style={styles.menuText}>My Vehicles</Text>
+  <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+</TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => router.push('/(user)/booking-history')}
           >
