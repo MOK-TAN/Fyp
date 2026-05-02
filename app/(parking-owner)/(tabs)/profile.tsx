@@ -3,13 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { supabase } from '../../../lib/supabase';
+
 import { styles } from './profile.styles';
 
 export default function Profile() {
@@ -126,6 +127,15 @@ export default function Profile() {
             <Ionicons name="star-outline" size={20} color="#111827" />
             <Text style={styles.menuText}>Rate & Review</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(parking-owner)/browse-lands')}
+          >
+            <Ionicons name="car-outline" size={22} color="#111827" />
+            <Text style={styles.menuText}>Browse lands</Text>
+            <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
