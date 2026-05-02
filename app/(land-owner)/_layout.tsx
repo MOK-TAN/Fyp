@@ -1,4 +1,4 @@
-// (landowner)/_layout.tsx
+// (land-owner)/_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
@@ -51,7 +51,7 @@ export default function LandownerLayout() {
         options={{
           title: 'Agreements',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="contract-outline" size={size} color={color} />
+            <Ionicons name="briefcase-outline" size={size} color={color} />
           ),
         }}
       />
@@ -64,6 +64,8 @@ export default function LandownerLayout() {
           ),
         }}
       />
+      {/* Hide add-land-plot from tab bar — accessed via button */}
+      <Tabs.Screen name="add-land-plot" options={{ href: null }} />
     </Tabs>
   );
 }
