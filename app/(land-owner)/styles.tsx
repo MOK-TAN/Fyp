@@ -1,3 +1,4 @@
+// (land-owner)/styles.tsx
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
@@ -101,7 +102,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-    // Profile Specific Styles
+  // Profile Specific Styles
   profileHeader: {
     alignItems: 'center',
     marginBottom: 30,
@@ -147,6 +148,13 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
+  // Left side group: icon + label
+  infoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
   infoLabel: {
     fontSize: 15,
     color: '#6B7280',
@@ -156,6 +164,8 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     textAlign: 'right',
+    flexShrink: 1,
+    marginLeft: 12,
   },
 
   menuItem: {
@@ -171,5 +181,6 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+    flex: 1,
   },
 });
