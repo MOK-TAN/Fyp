@@ -77,7 +77,7 @@ export default function SubmitReview() {
   };
 
   const handleSkip = () => {
-    router.replace('/(user)/(tabs)/');
+    router.replace('/(user)/(tabs)');
   };
 
   const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
