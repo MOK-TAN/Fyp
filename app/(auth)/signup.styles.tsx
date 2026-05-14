@@ -1,162 +1,173 @@
-import { StyleSheet, Dimensions } from 'react-native';
-
-const { width } = Dimensions.get('window');
-
-// ─── Styles ───
+import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingBottom: 40,
-  },
-  heroImage: {
-    width: width,
-    height: 200,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
   },
   header: {
-    paddingHorizontal: 24,
-    marginTop: 24,
-    marginBottom: 24,
+    marginBottom: 32,
   },
   headerText: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '600',
+    lineHeight: 40,
   },
-  greenText: {
+  createText: {
     color: '#22C55E',
   },
-  darkText: {
-    color: '#1a1a1a',
+  accountText: {
+    color: '#1F2937',
   },
-  generalErrorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginHorizontal: 24,
+  inputContainer: {
     marginBottom: 16,
-    gap: 8,
-  },
-  generalErrorText: {
-    color: '#DC2626',
-    fontSize: 13,
-    flex: 1,
-  },
-  fieldContainer: {
-    marginHorizontal: 24,
-    marginBottom: 14,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#E5E7EB',
     borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 52,
-    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 16,
+    height: 56,
+    backgroundColor: '#FFFFFF',
   },
   inputError: {
-    borderColor: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
   },
-  inputIcon: {
-    marginRight: 10,
+  icon: {
+    marginRight: 12,
   },
   input: {
     flex: 1,
-    fontSize: 15,
-    color: '#1a1a1a',
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '400',
   },
-  errorRow: {
+  eyeIcon: {
+    padding: 4,
+  },
+  errorContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginTop: 6,
-    paddingLeft: 4,
-    gap: 5,
+    marginLeft: 16,
+  },
+  errorDot: {
+    color: '#EF4444',
+    fontSize: 20,
+    lineHeight: 20,
+    marginRight: 4,
   },
   errorText: {
-    color: '#DC2626',
-    fontSize: 12,
+    color: '#EF4444',
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+    fontWeight: '400',
   },
   roleContainer: {
+    marginTop: 8,
+    marginBottom: 32,
+  },
+  roleLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  roleButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  roleButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    marginTop: 4,
-    marginBottom: 24,
-    gap: 20,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
   },
-  roleOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  roleButtonActive: {
+    borderColor: '#22C55E',
+    backgroundColor: '#F0FDF4',
   },
-  radioOuter: {
+  roleRadio: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
     borderColor: '#D1D5DB',
+    marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOuterSelected: {
+  roleRadioActive: {
     borderColor: '#22C55E',
   },
-  radioInner: {
+  roleRadioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: '#22C55E',
   },
-  roleLabel: {
-    fontSize: 14,
+  roleButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
     color: '#6B7280',
   },
-  roleLabelSelected: {
-    color: '#1a1a1a',
-    fontWeight: '500',
+  roleButtonTextActive: {
+    color: '#22C55E',
   },
   signUpButton: {
     backgroundColor: '#22C55E',
+    height: 56,
     borderRadius: 12,
-    height: 52,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 24,
-    marginBottom: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#22C55E',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signUpButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   signUpButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
-  loginRow: {
+  loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 8,
   },
   loginText: {
     color: '#6B7280',
     fontSize: 14,
+    fontWeight: '400',
   },
   loginLink: {
-    color: '#1a1a1a',
+    color: '#22C55E',
     fontSize: 14,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
 });
 
