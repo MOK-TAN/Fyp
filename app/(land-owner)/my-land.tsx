@@ -114,7 +114,14 @@ export default function MyLand() {
               .eq('id', land.id);
             setDeletingId(null);
             if (error) {
-              Alert.alert('Error', error.message);
+              if (error.code === '23503') {
+                Alert.alert(
+                  'Cannot Delete',
+                  'This land has a rental agreement linked to it, so it can\'t be deleted.'
+                );
+              } else {
+                Alert.alert('Error', error.message);
+              }
             } else {
               setLands(prev => prev.filter(l => l.id !== land.id));
             }

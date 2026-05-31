@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -265,6 +267,24 @@ export default function AdminDashboard() {
           <View style={styles.adminBadge}>
             <Text style={styles.adminBadgeText}>ADMIN</Text>
           </View>
+          <TouchableOpacity
+            style={{ marginLeft: 12, padding: 6 }}
+            onPress={() =>
+              Alert.alert('Log Out', 'Are you sure you want to log out?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Log Out',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await supabase.auth.signOut();
+                    router.replace('/(auth)/login');
+                  },
+                },
+              ])
+            }
+          >
+            <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+          </TouchableOpacity>
         </View>
       </View>
 

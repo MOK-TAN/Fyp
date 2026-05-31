@@ -92,6 +92,18 @@ export default function SelectSlot() {
       return;
     }
 
+    // router.push({
+    //   pathname: '/(user)/bookings/select-datetime',
+    //   params: {
+    //     parkingId,
+    //     parkingName,
+    //     pricePerHour,
+    //     slotId: selectedSlot,
+    //   }
+    // });
+
+    const selected = slots.find(s => s.id === selectedSlot);
+
     router.push({
       pathname: '/(user)/bookings/select-datetime',
       params: {
@@ -99,6 +111,11 @@ export default function SelectSlot() {
         parkingName,
         pricePerHour,
         slotId: selectedSlot,
+        slotNumber: selected
+          ? (/[A-Za-z]/.test(String(selected.slot_number))
+              ? selected.slot_number
+              : `${(selected.section || 'A').toUpperCase()}${selected.slot_number}`)
+          : '',
       }
     });
   };

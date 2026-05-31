@@ -18,6 +18,7 @@ export default function SelectDateTime() {
   const parkingName = params.parkingName as string || 'Parking Spot';
   const pricePerHour = params.pricePerHour as string || '50';
   const slotId = params.slotId as string || 'A1';
+  const slotNumber = params.slotNumber as string || slotId;
 
   const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState(new Date());
@@ -107,6 +108,7 @@ export default function SelectDateTime() {
         parkingName,
         pricePerHour,
         slotId,
+        slotNumber,
         date: formatDate(date),
         startTime: formatTime(startTime),
         endTime: formatTime(endTime),
@@ -141,7 +143,8 @@ export default function SelectDateTime() {
           </View>
           <View style={styles.slotInfo}>
             <Text style={styles.slotLabel}>Selected Slot</Text>
-            <Text style={styles.slotValue}>{slotId}</Text>
+            {/* <Text style={styles.slotValue}>{slotId}</Text> */}
+            <Text style={styles.slotValue}>{slotNumber}</Text>
           </View>
           <TouchableOpacity
             onPress={() => router.back()}

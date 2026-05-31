@@ -363,7 +363,7 @@ export default function SlotManager() {
           total_amount: totalAmount,
           payment_method: 'cash',
           payment_status: walkInPaid ? 'paid' : 'pending',
-          booking_status: 'confirmed',
+          booking_status: 'active',
           is_timer_active: true,
           is_walkin: true,
           guest_name: guestName.trim(),

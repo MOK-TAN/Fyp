@@ -524,9 +524,23 @@ export default function AdminApprovals() {
           onPress: async () => {
             setIsProcessing(id);
             const table = isFacility ? 'parking_facilities' : 'land_listings';
-            const { error } = await supabase.from(table).delete().eq('id', id);
+            // const { error } = await supabase.from(table).delete().eq('id', id);
+            // if (error) {
+            //   Alert.alert('Error', error.message);
+            // } else {
+
+              const { error } = await supabase.from(table).delete().eq('id', id);
             if (error) {
-              Alert.alert('Error', error.message);
+              if (error.code === '23503') {
+                Alert.alert(
+                  'Cannot Delete',
+                  isFacility
+                    ? 'This facility has bookings linked to it and can\'t be deleted. Suspend it instead.'
+                    : 'This land has an agreement linked to it and can\'t be deleted.'
+                );
+              } else {
+                Alert.alert('Error', error.message);
+              }
             } else {
               if (isFacility) setFacilities(prev => prev.filter(f => f.id !== id));
               else setLands(prev => prev.filter(l => l.id !== id));

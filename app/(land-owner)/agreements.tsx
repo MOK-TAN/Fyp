@@ -29,6 +29,19 @@ type Agreement = {
 const formatDate = (d: string) =>
   new Date(d).toLocaleDateString('en-NP', { day: 'numeric', month: 'short', year: 'numeric' });
 
+const timeLeftLabel = (end: string) => {
+  const now = new Date();
+  const ms = new Date(end).getTime() - now.getTime();
+  if (ms <= 0) return 'Agreement ended';
+  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+  if (days < 30) return `${days} day${days === 1 ? '' : 's'} left`;
+  const months = Math.floor(days / 30);
+  const remDays = days % 30;
+  return remDays > 0
+    ? `${months} month${months === 1 ? '' : 's'}, ${remDays} day${remDays === 1 ? '' : 's'} left`
+    : `${months} month${months === 1 ? '' : 's'} left`;
+};
+
 const monthsBetween = (start: string, end: string) => {
   const s = new Date(start);
   const e = new Date(end);
@@ -280,19 +293,16 @@ export default function Agreements() {
                 )}
 
                 {ag.status === 'active' && (
-                  <TouchableOpacity
-                    style={{
-                      marginTop: 14, backgroundColor: '#FEE2E2',
-                      padding: 11, borderRadius: 10,
-                      flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6,
-                    }}
-                    onPress={() => handleTerminate(ag)}
-                  >
-                    <Ionicons name="close-circle-outline" size={15} color="#EF4444" />
-                    <Text style={{ color: '#EF4444', fontWeight: '600', fontSize: 13 }}>
-                      Terminate Agreement
+                  <View style={{
+                    marginTop: 14, backgroundColor: '#F0FDF4',
+                    padding: 11, borderRadius: 10,
+                    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6,
+                  }}>
+                    <Ionicons name="time-outline" size={15} color="#16A34A" />
+                    <Text style={{ color: '#16A34A', fontWeight: '600', fontSize: 13 }}>
+                      {timeLeftLabel(ag.end_date)}
                     </Text>
-                  </TouchableOpacity>
+                  </View>
                 )}
               </View>
             );

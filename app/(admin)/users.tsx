@@ -2,16 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -433,21 +433,27 @@ export default function AdminUsers() {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
+    
     try {
-      // Delete from Supabase Auth first (admin action)
-      const { error: authError } = await supabase.auth.admin.deleteUser(deleteTarget.id);
-      if (authError) {
-        // Fallback: just delete profile row (cascade handles the rest)
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', deleteTarget.id);
-        if (profileError) {
+      // Delete the profile row (CASCADE clears vehicles, saved data, notifications, reviews)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', deleteTarget.id);
+
+      if (profileError) {
+        if (profileError.code === '23503') {
+          Alert.alert(
+            'Cannot Delete',
+            'This user has bookings, facilities, or agreements linked to their account and cannot be deleted.'
+          );
+        } else {
           Alert.alert('Error', 'Failed to delete user: ' + profileError.message);
-          setIsDeleting(false);
-          return;
         }
+        setIsDeleting(false);
+        return;
       }
+
       setUsers(prev => prev.filter(u => u.id !== deleteTarget.id));
       setDeleteTarget(null);
       Alert.alert('Deleted', `${deleteTarget.full_name}'s account has been permanently deleted.`);

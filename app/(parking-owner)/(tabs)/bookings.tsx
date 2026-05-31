@@ -32,6 +32,10 @@ type Booking = {
   total_amount: number;
   payment_status: string;
   booking_status: string;
+    payment_method: string | null;
+  is_walkin: boolean;
+  guest_name: string | null;
+  guest_plate: string | null;
   slot_id: string;
   actual_start_time: string | null;
 };
@@ -146,6 +150,10 @@ export default function Bookings() {
   booking_status,
   slot_id,
   actual_start_time,
+  payment_method,
+  is_walkin,
+  guest_name,
+  guest_plate,
   parking_facilities (name),
   profiles (full_name),
   vehicles (plate_number),
@@ -162,8 +170,8 @@ export default function Bookings() {
   facility_id: b.facility_id,
   user_id: b.user_id,
   facility_name: b.parking_facilities?.name || 'Unknown',
-        customer_name: b.profiles?.full_name || 'Guest',
-        vehicle_plate: b.vehicles?.plate_number || 'N/A',
+        customer_name: b.is_walkin ? (b.guest_name || 'Walk-in Guest') : (b.profiles?.full_name || 'Guest'),
+        vehicle_plate: b.is_walkin ? (b.guest_plate || 'N/A') : (b.vehicles?.plate_number || 'N/A'),
         slot_number: b.parking_slots?.slot_number || '-',
         booking_date: b.booking_date,
         start_time: b.start_time,
@@ -171,6 +179,10 @@ export default function Bookings() {
         total_amount: b.total_amount,
         payment_status: b.payment_status,
         booking_status: b.booking_status,
+        payment_method: b.payment_method || null,
+        is_walkin: b.is_walkin || false,
+        guest_name: b.guest_name || null,
+        guest_plate: b.guest_plate || null,
         slot_id: b.slot_id,
         actual_start_time: b.actual_start_time || null,
       }));
@@ -301,6 +313,101 @@ export default function Bookings() {
         },
       ]
     );
+  };
+
+  // Owner stops an active session, then verifies cash payment
+  const handleStopParking = (booking: Booking) => {
+    Alert.alert(
+      'Stop Parking',
+      `End the session for ${booking.customer_name} (slot ${booking.slot_number})?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Stop',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error: bErr } = await supabase
+                .from('bookings')
+                .update({
+                  booking_status: 'completed',
+                  is_timer_active: false,
+                  actual_end_time: new Date().toISOString(),
+                })
+                .eq('id', booking.id);
+              if (bErr) throw bErr;
+
+              const { error: sErr } = await supabase
+                .from('parking_slots')
+                .update({ is_available: true, is_occupied: false, current_booking_id: null })
+                .eq('id', booking.slot_id);
+              if (sErr) console.error('Slot release error:', sErr);
+
+              setBookings(prev =>
+                prev.map(b =>
+                  b.id === booking.id ? { ...b, booking_status: 'completed' } : b
+                )
+              );
+
+              // Khalti is already paid — only ask for cash
+              if (booking.payment_method === 'cash' && booking.payment_status !== 'paid') {
+                Alert.alert(
+                  'Payment Received?',
+                  `Did ${booking.customer_name} pay Rs ${booking.total_amount} in cash?`,
+                  [
+                    { text: 'Unpaid', style: 'cancel', onPress: () => markPayment(booking, false) },
+                    { text: 'Paid', onPress: () => markPayment(booking, true) },
+                  ]
+                );
+              } else {
+                Alert.alert('Session Ended', 'Parking session completed.');
+              }
+            } catch (error) {
+              console.error('Stop parking error:', error);
+              Alert.alert('Error', 'Failed to stop parking');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Owner marks a cash booking paid / unpaid
+  const markPayment = async (booking: Booking, paid: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ payment_status: paid ? 'paid' : 'pending' })
+        .eq('id', booking.id);
+      if (error) throw error;
+
+      setBookings(prev =>
+        prev.map(b =>
+          b.id === booking.id ? { ...b, payment_status: paid ? 'paid' : 'pending' } : b
+        )
+      );
+
+      // Notify the user (skip walk-in guests with no user_id)
+      if (paid && booking.user_id && !booking.is_walkin) {
+        try {
+          await supabase.from('notifications').insert({
+            user_id: booking.user_id,
+            type: 'payment_success',
+            title: 'Payment Confirmed',
+            message: `Your cash payment of Rs ${booking.total_amount} for ${booking.booking_reference} has been confirmed.`,
+            booking_id: booking.id,
+            facility_id: booking.facility_id,
+          });
+        } catch (notifErr) {
+          console.error('Notification error:', notifErr);
+        }
+      }
+
+      Alert.alert(paid ? 'Marked Paid' : 'Marked Unpaid', paid ? 'Payment confirmed.' : 'Left as pending.');
+    } catch (error) {
+      console.error('Mark payment error:', error);
+      Alert.alert('Error', 'Failed to update payment status');
+    }
   };
 
   const formatTime = (time: string) => {
@@ -522,7 +629,7 @@ export default function Bookings() {
               )}
 
               {/* Live Timer + Cancel Button (only for active bookings) */}
-              {booking.booking_status === 'active' && (
+              {/* {booking.booking_status === 'active' && (
                 <View>
                   <LiveTimer actualStartTime={booking.actual_start_time} />
                   <TouchableOpacity
@@ -533,7 +640,49 @@ export default function Bookings() {
                     <Text style={styles.cancelButtonText}>Cancel Booking</Text>
                   </TouchableOpacity>
                 </View>
+              )} */}
+
+              {/* Live Timer + Stop / Cancel (active bookings) */}
+              {booking.booking_status === 'active' && (
+                <View>
+                  <LiveTimer actualStartTime={booking.actual_start_time} />
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#22C55E', borderRadius: 12, paddingVertical: 14, marginTop: 12 }}
+                    onPress={() => handleStopParking(booking)}
+                  >
+                    <Ionicons name="stop-circle-outline" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Stop Parking</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => handleCancelBooking(booking)}
+                  >
+                    <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+                    <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+                  </TouchableOpacity>
+                </View>
               )}
+
+              {/* Verify cash payment (completed cash bookings not yet paid) */}
+              {booking.booking_status === 'completed' &&
+                booking.payment_method === 'cash' &&
+                booking.payment_status !== 'paid' && (
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#22C55E', borderRadius: 12, paddingVertical: 12 }}
+                      onPress={() => markPayment(booking, true)}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Mark Paid</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#EF4444', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18 }}
+                      onPress={() => markPayment(booking, false)}
+                    >
+                      <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 14 }}>Unpaid</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
             </View>
           ))
         )}

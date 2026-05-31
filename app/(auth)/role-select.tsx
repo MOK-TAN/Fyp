@@ -4,6 +4,8 @@ import { Button, Text, View } from "react-native";
 export default function RoleSelect() {
   return (
     <View>
+      <Button title="← Back" onPress={() => router.back()} />
+
       <Text>Select Role</Text>
 
       <Button title="User" onPress={() => router.push("/(auth)/signup?role=user")} />

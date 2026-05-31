@@ -16,6 +16,7 @@ export default function ReviewBooking() {
   const parkingName = params.parkingName as string || 'Parking Spot';
   const pricePerHour = params.pricePerHour as string || '50';
   const slotId = params.slotId as string || 'A1';
+  const slotNumber = params.slotNumber as string || slotId;
   const date = params.date as string || '';
   const startTime = params.startTime as string || '';
   const endTime = params.endTime as string || '';
@@ -37,6 +38,7 @@ export default function ReviewBooking() {
         parkingName,
         pricePerHour,
         slotId,
+        slotNumber,
         date,
         startTime,
         endTime,
@@ -84,7 +86,8 @@ export default function ReviewBooking() {
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Parking Slot</Text>
             <View style={styles.slotBadge}>
-              <Text style={styles.slotBadgeText}>{slotId}</Text>
+              {/* <Text style={styles.slotBadgeText}>{slotId}</Text> */}
+              <Text style={styles.slotBadgeText}>{slotNumber}</Text>
             </View>
           </View>
 
@@ -184,7 +187,7 @@ export default function ReviewBooking() {
           <View style={styles.noteItem}>
             <Text style={styles.bullet}>•</Text>
             <Text style={styles.noteText}>
-              Your slot {slotId} will be reserved upon payment confirmation
+              Your slot {slotNumber} will be reserved upon payment confirmation
             </Text>
           </View>
         </View>

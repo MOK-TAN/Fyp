@@ -4,11 +4,12 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 import { styles } from './select-vehicle.styles';
@@ -29,6 +30,7 @@ export default function SelectVehicle() {
   const parkingName = params.parkingName as string;
   const pricePerHour = params.pricePerHour as string;
   const slotId = params.slotId as string;
+  const slotNumber = params.slotNumber as string || '';
   const date = params.date as string;
   const startTime = params.startTime as string;
   const endTime = params.endTime as string;
@@ -40,8 +42,15 @@ export default function SelectVehicle() {
   const [loading, setLoading] = useState(true);
   
   // Manual entry states
-  const [manualPlate, setManualPlate] = useState('BA 12 PA 3456');
-  const [manualModel, setManualModel] = useState('Honda City');
+  // const [manualPlate, setManualPlate] = useState('BA 12 PA 3456');
+  // const [manualModel, setManualModel] = useState('Honda City');
+
+  // Add-vehicle modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newPlate, setNewPlate] = useState('');
+  const [newModel, setNewModel] = useState('');
+  const [newType, setNewType] = useState<'car' | 'bike' | 'bus'>('car');
+  const [savingVehicle, setSavingVehicle] = useState(false);
 
   useEffect(() => {
     fetchVehicles();
@@ -88,23 +97,83 @@ export default function SelectVehicle() {
     }
   };
 
-  const handleManualAdd = () => {
-    if (!manualPlate.trim() || !manualModel.trim()) {
+  // const handleManualAdd = () => {
+  //   if (!manualPlate.trim() || !manualModel.trim()) {
+  //     Alert.alert('Error', 'Please enter plate number and model');
+  //     return;
+  //   }
+
+  //   const tempVehicle: Vehicle = {
+  //     id: 'manual-' + Date.now(),
+  //     plate_number: manualPlate.trim().toUpperCase(),
+  //     model: manualModel.trim(),
+  //     vehicle_type: 'car',
+  //     color: 'Not specified',
+  //     is_default: true,
+  //   };
+    
+  //   setVehicles([tempVehicle]);
+  //   setSelectedVehicleId(tempVehicle.id);
+  // };
+
+  const addVehicle = async () => {
+    if (!newPlate.trim() || !newModel.trim()) {
       Alert.alert('Error', 'Please enter plate number and model');
       return;
     }
+    if (newPlate.trim().length < 4) {
+      Alert.alert('Error', 'Plate number is too short');
+      return;
+    }
 
-    const tempVehicle: Vehicle = {
-      id: 'manual-' + Date.now(),
-      plate_number: manualPlate.trim().toUpperCase(),
-      model: manualModel.trim(),
-      vehicle_type: 'car',
-      color: 'Not specified',
-      is_default: true,
-    };
-    
-    setVehicles([tempVehicle]);
-    setSelectedVehicleId(tempVehicle.id);
+    try {
+      setSavingVehicle(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Error', 'Please log in to add a vehicle');
+        return;
+      }
+
+      // First vehicle becomes default so it's preselected
+      const makeDefault = vehicles.length === 0;
+
+      const { data: inserted, error } = await supabase
+        .from('vehicles')
+        .insert({
+          user_id: user.id,
+          plate_number: newPlate.trim().toUpperCase(),
+          model: newModel.trim(),
+          vehicle_type: newType,
+          color: 'Not specified',
+          is_default: makeDefault,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          Alert.alert('Duplicate', 'You already have a vehicle with this plate number.');
+        } else {
+          Alert.alert('Error', error.message || 'Failed to add vehicle');
+        }
+        return;
+      }
+
+      // Refresh list, then auto-select the new vehicle
+      await fetchVehicles();
+      setSelectedVehicleId(inserted.id);
+
+      setNewPlate('');
+      setNewModel('');
+      setNewType('car');
+      setShowAddModal(false);
+    } catch (e: any) {
+      console.error('Add vehicle error:', e);
+      Alert.alert('Error', 'Failed to add vehicle');
+    } finally {
+      setSavingVehicle(false);
+    }
   };
 
   const handleContinue = () => {
@@ -127,6 +196,7 @@ export default function SelectVehicle() {
         parkingName,
         pricePerHour,
         slotId,
+        slotNumber,
         date,
         startTime,
         endTime,
@@ -140,12 +210,19 @@ export default function SelectVehicle() {
     });
   };
 
+  // const handleAddVehicle = () => {
+  //   Alert.alert(
+  //     'Add Vehicle',
+  //     'You can add vehicles from your Profile. For now, use the quick entry form below.',
+  //     [{ text: 'OK' }]
+  //   );
+  // };
+
   const handleAddVehicle = () => {
-    Alert.alert(
-      'Add Vehicle',
-      'You can add vehicles from your Profile. For now, use the quick entry form below.',
-      [{ text: 'OK' }]
-    );
+    setNewPlate('');
+    setNewModel('');
+    setNewType('car');
+    setShowAddModal(true);
   };
 
   if (loading) {
@@ -176,7 +253,7 @@ export default function SelectVehicle() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>{parkingName}</Text>
+          <Text style={styles.summaryTitle}>{parkingName} {slotNumber} </Text>
           <View style={styles.summaryRow}>
             <Ionicons name="calendar-outline" size={16} color="#6B7280" />
             <Text style={styles.summaryText}>{date}</Text>
@@ -194,44 +271,59 @@ export default function SelectVehicle() {
         <Text style={styles.sectionTitle}>Your Vehicles</Text>
 
         {vehicles.length === 0 ? (
+          // <View style={styles.manualEntryCard}>
+          //   <View style={styles.manualHeader}>
+          //     <Ionicons name="car-sport" size={32} color="#22C55E" />
+          //   </View>
+          //   <Text style={styles.manualTitle}>Quick Vehicle Entry</Text>
+          //   <Text style={styles.manualSubtitle}>Enter your vehicle details to continue booking</Text>
+            
+          //   <View style={styles.manualInputGroup}>
+          //     <Text style={styles.manualLabel}>Plate Number</Text>
+          //     <TextInput
+          //       style={styles.manualInput}
+          //       placeholder="BA 12 PA 3456"
+          //       value={manualPlate}
+          //       onChangeText={setManualPlate}
+          //       autoCapitalize="characters"
+          //     />
+          //   </View>
+
+          //   <View style={styles.manualInputGroup}>
+          //     <Text style={styles.manualLabel}>Model</Text>
+          //     <TextInput
+          //       style={styles.manualInput}
+          //       placeholder="Honda City"
+          //       value={manualModel}
+          //       onChangeText={setManualModel}
+          //     />
+          //   </View>
+            
+          //   <TouchableOpacity
+          //     style={styles.manualAddButton}
+          //     onPress={handleManualAdd}
+          //   >
+          //     <Text style={styles.manualAddButtonText}>Continue with this vehicle</Text>
+          //   </TouchableOpacity>
+
+          //   <Text style={styles.manualNote}>
+          //     💡 This vehicle will be saved when you complete the booking
+          //   </Text>
+          // </View>
+
           <View style={styles.manualEntryCard}>
             <View style={styles.manualHeader}>
               <Ionicons name="car-sport" size={32} color="#22C55E" />
             </View>
-            <Text style={styles.manualTitle}>Quick Vehicle Entry</Text>
-            <Text style={styles.manualSubtitle}>Enter your vehicle details to continue booking</Text>
-            
-            <View style={styles.manualInputGroup}>
-              <Text style={styles.manualLabel}>Plate Number</Text>
-              <TextInput
-                style={styles.manualInput}
-                placeholder="BA 12 PA 3456"
-                value={manualPlate}
-                onChangeText={setManualPlate}
-                autoCapitalize="characters"
-              />
-            </View>
+            <Text style={styles.manualTitle}>No Vehicles Yet</Text>
+            <Text style={styles.manualSubtitle}>Add a vehicle to continue with your booking</Text>
 
-            <View style={styles.manualInputGroup}>
-              <Text style={styles.manualLabel}>Model</Text>
-              <TextInput
-                style={styles.manualInput}
-                placeholder="Honda City"
-                value={manualModel}
-                onChangeText={setManualModel}
-              />
-            </View>
-            
             <TouchableOpacity
               style={styles.manualAddButton}
-              onPress={handleManualAdd}
+              onPress={handleAddVehicle}
             >
-              <Text style={styles.manualAddButtonText}>Continue with this vehicle</Text>
+              <Text style={styles.manualAddButtonText}>+ Add Vehicle</Text>
             </TouchableOpacity>
-
-            <Text style={styles.manualNote}>
-              💡 This vehicle will be saved when you complete the booking
-            </Text>
           </View>
         ) : (
           <>
@@ -311,6 +403,79 @@ export default function SelectVehicle() {
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
       </View>
+
+            {/* Add Vehicle Modal */}
+      <Modal
+        visible={showAddModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: '#111827' }}>Add Vehicle</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 6 }}>Plate Number</Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 14 }}
+              placeholder="BA 12 PA 3456"
+              placeholderTextColor="#9CA3AF"
+              value={newPlate}
+              onChangeText={setNewPlate}
+              autoCapitalize="characters"
+            />
+
+            <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 6 }}>Model</Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 14 }}
+              placeholder="Honda City"
+              placeholderTextColor="#9CA3AF"
+              value={newModel}
+              onChangeText={setNewModel}
+            />
+
+            <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 6 }}>Type</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+              {(['car', 'bike', 'bus'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  onPress={() => setNewType(t)}
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: newType === t ? '#22C55E' : '#E5E7EB',
+                    backgroundColor: newType === t ? '#F0FDF4' : '#fff',
+                  }}
+                >
+                  <Text style={{ color: newType === t ? '#22C55E' : '#6B7280', fontWeight: '600', textTransform: 'capitalize' }}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={{ backgroundColor: '#22C55E', borderRadius: 12, paddingVertical: 15, alignItems: 'center', opacity: savingVehicle ? 0.7 : 1 }}
+              onPress={addVehicle}
+              disabled={savingVehicle}
+            >
+              {savingVehicle ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Save Vehicle</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={{ height: 12 }} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

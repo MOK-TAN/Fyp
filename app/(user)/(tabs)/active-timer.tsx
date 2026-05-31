@@ -263,7 +263,37 @@ export default function ActiveParking() {
                 })
                 .eq('id', booking.slot_id);
 
+              // if (slotError) console.error('Slot release error:', slotError);
+
+              // // Clear booking state so empty state shows
+              // setBooking(null);
+
               if (slotError) console.error('Slot release error:', slotError);
+
+              // Notify the parking owner the session ended (verify cash payment)
+              try {
+                const { data: facility } = await supabase
+                  .from('parking_facilities')
+                  .select('owner_id')
+                  .eq('id', booking.facility_id)
+                  .single();
+
+                if (facility?.owner_id) {
+                  const isCash = booking.payment_method === 'cash';
+                  await supabase.from('notifications').insert({
+                    user_id: facility.owner_id,
+                    type: 'system_alert',
+                    title: 'Parking Session Ended',
+                    message: isCash
+                      ? `${booking.facility_name} • slot ${booking.slot_number} ended (${booking.booking_reference}). Please verify cash payment.`
+                      : `${booking.facility_name} • slot ${booking.slot_number} ended (${booking.booking_reference}).`,
+                    booking_id: booking.id,
+                    facility_id: booking.facility_id,
+                  });
+                }
+              } catch (notifErr) {
+                console.error('Owner notification error:', notifErr);
+              }
 
               // Clear booking state so empty state shows
               setBooking(null);

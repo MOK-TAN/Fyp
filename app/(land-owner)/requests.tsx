@@ -123,17 +123,7 @@ export default function Requests() {
               const { data: { user } } = await supabase.auth.getUser();
               if (!user) return;
 
-              // 1) Update request to accepted
-              const { error: reqErr } = await supabase
-                .from('land_rental_requests')
-                .update({
-                  status: 'accepted',
-                  responded_at: new Date().toISOString(),
-                })
-                .eq('id', req.id);
-              if (reqErr) throw reqErr;
-
-              // 2) Create agreement
+              // 1) Create the agreement FIRST (the constraint-protected step)
               const { error: agErr } = await supabase
                 .from('land_agreements')
                 .insert({
@@ -146,7 +136,25 @@ export default function Requests() {
                   end_date: req.proposed_end_date,
                   status: 'active',
                 });
-              if (agErr) throw agErr;
+              if (agErr) {
+                if (agErr.code === '23505') {
+                  Alert.alert('Already Rented', 'This land already has an active agreement.');
+                } else {
+                  Alert.alert('Error', agErr.message || 'Failed to create agreement.');
+                }
+                setProcessingId(null);
+                return;
+              }
+
+              // 2) Now mark the request accepted
+              const { error: reqErr } = await supabase
+                .from('land_rental_requests')
+                .update({
+                  status: 'accepted',
+                  responded_at: new Date().toISOString(),
+                })
+                .eq('id', req.id);
+              if (reqErr) throw reqErr;
 
               // 3) Mark land unavailable
               await supabase
@@ -176,9 +184,12 @@ export default function Requests() {
               );
 
               setRequests(prev =>
-                prev.map(r =>
-                  r.id === req.id ? { ...r, status: 'accepted' as const } : r
-                )
+                prev.map(r => {
+                  if (r.id === req.id) return { ...r, status: 'accepted' as const };
+                  if (r.land_id === req.land_id && r.status === 'pending')
+                    return { ...r, status: 'cancelled' as const };
+                  return r;
+                })
               );
               Alert.alert('Accepted ✓', 'Agreement created. Parking owner has been notified.');
             } catch (e: any) {

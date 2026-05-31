@@ -16,7 +16,8 @@ import { supabase } from '../../lib/supabase';
 
 type SavedItem = {
   id: string;
-  type: 'facility' | 'personal';        // Important: to distinguish both types
+  facility_id?: string;
+  type: 'facility' | 'personal'; 
   name: string;
   address?: string;
   latitude?: number;
@@ -83,6 +84,7 @@ const SavedParking = () => {
 
         items.push({
           id: item.id,
+          facility_id: item.facility_id,
           type: 'facility',
           name: facility.name,
           address: facility.address,
@@ -158,7 +160,7 @@ const SavedParking = () => {
       router.push({
         pathname: '/(user)/parking-details',
         params: {
-          parkingId: item.id, // Wait, actually we need facility_id for facility
+          parkingId: item.facility_id || item.id,
           parkingName: item.name,
           parkingAddress: item.address || '',
           pricePerHour: item.price_per_hour?.toString() || '',

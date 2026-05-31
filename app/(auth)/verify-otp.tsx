@@ -103,8 +103,25 @@ const VerifyOTP = () => {
         return;
       }
 
-      Alert.alert('Verified! ✅', 'Your email has been verified. You can now log in.', [
-        { text: 'OK', onPress: () => router.replace('/(auth)/login') },
+      // Alert.alert('Verified! ✅', 'Your email has been verified. You can now log in.', [
+      //   { text: 'OK', onPress: () => router.replace('/(auth)/login') },
+      // ]);
+
+      // Verified — they now have a session, route to the right dashboard
+      const { data: { user } } = await supabase.auth.getUser();
+      let target = '/(user)/(tabs)';
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (profile?.role === 'parking_owner') target = '/(parking-owner)/(tabs)';
+        else if (profile?.role === 'land_owner') target = '/(land-owner)';
+        else if (profile?.role === 'admin') target = '/(admin)';
+      }
+      Alert.alert('Verified! ✅', 'Your email has been verified.', [
+        { text: 'OK', onPress: () => router.replace(target as any) },
       ]);
     } catch (err) {
       Alert.alert('Error', 'Failed to verify. Please try again.');

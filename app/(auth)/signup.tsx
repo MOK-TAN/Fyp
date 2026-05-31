@@ -205,9 +205,24 @@ const SignUp = () => {
         }
 
         // 3. Redirect based on email confirmation setting
+        // if (data.session) {
+        //   // Email confirmation is OFF — user is already logged in, go to login
+        //   router.replace('/(auth)/login');
+        // } else {
+
+          // 3. Redirect based on email confirmation setting
         if (data.session) {
-          // Email confirmation is OFF — user is already logged in, go to login
-          router.replace('/(auth)/login');
+          // Already logged in — go straight to the right dashboard
+          switch (selectedRole) {
+            case 'parking_owner':
+              router.replace('/(parking-owner)/(tabs)');
+              break;
+            case 'land_owner':
+              router.replace('/(land-owner)');
+              break;
+            default:
+              router.replace('/(user)/(tabs)');
+          }
         } else {
           // Email confirmation is ON — redirect to OTP verification screen
           router.replace({
@@ -241,6 +256,16 @@ const SignUp = () => {
           style={styles.heroImage}
           resizeMode="cover"
         />
+
+        {/* Header */}
+        {/* Back */}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ marginBottom: 8 }}
+        >
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
 
         {/* Header */}
         <View style={styles.header}>

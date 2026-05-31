@@ -55,7 +55,7 @@ export default function Profile() {
               await supabase.auth.signOut();
               await AsyncStorage.removeItem('auth_token');
               await AsyncStorage.removeItem('user_phone');
-              router.replace('/login');
+              router.replace('/(auth)/login');
             } catch (error) {
               Alert.alert('Error', 'Failed to logout');
             }
@@ -123,9 +123,12 @@ export default function Profile() {
         {/* More Section */}
         <Text style={styles.sectionTitle}>More</Text>
         <View style={styles.menuList}>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(parking-owner)/reviews')}
+          >
             <Ionicons name="star-outline" size={20} color="#111827" />
-            <Text style={styles.menuText}>Rate & Review</Text>
+            <Text style={styles.menuText}>Reviews</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
@@ -135,6 +138,15 @@ export default function Profile() {
           >
             <Ionicons name="car-outline" size={22} color="#111827" />
             <Text style={styles.menuText}>Browse lands</Text>
+            <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(parking-owner)/my-lands')}
+          >
+            <Ionicons name="business-outline" size={22} color="#111827" />
+            <Text style={styles.menuText}>My Rented Lands</Text>
             <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
           </TouchableOpacity>
 

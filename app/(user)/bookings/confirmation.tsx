@@ -45,7 +45,7 @@ export default function Confirmation() {
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
-      case 'esewa': return 'eSewa';
+      
       case 'khalti': return 'Khalti';
       case 'cash': return 'Cash';
       default: return 'Cash';
@@ -119,7 +119,7 @@ export default function Confirmation() {
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Parking Slot</Text>
             <View style={styles.slotBadge}>
-              <Text style={styles.slotBadgeText}>{slotId}</Text>
+              <Text style={styles.slotBadgeText}>{params.slotNumber}</Text>
             </View>
           </View>
 

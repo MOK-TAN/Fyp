@@ -13,6 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { supabase } from '../../lib/supabase';
+
 
 const ForgotPassword = () => {
   const [phoneEmail, setPhoneEmail] = useState('');
@@ -49,24 +51,44 @@ const ForgotPassword = () => {
 
     try {
       // Simulate network delay
-      await delay(1000);
+      // await delay(1000);
 
-      // Success - Navigate to OTP verification
+      // // Success - Navigate to OTP verification
+      // Alert.alert(
+      //   'Code Sent! 📧',
+      //   `A password reset code has been sent to ${phoneEmail}`,
+      //   [
+      //     {
+      //       text: 'OK',
+      //       onPress: () => {
+      //         // Navigate to OTP verification screen
+      //         router.push({
+      //           pathname: '/(auth)/verify-otp',
+      //           params: { phoneEmail }
+      //         });
+      //       },
+      //     },
+      //   ]
+      // );
+
+      // Email reset only
+      const input = phoneEmail.trim().toLowerCase();
+      if (!input.includes('@')) {
+        setPhoneEmailError('Please enter the email address for your account');
+        setIsLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(input);
+      if (error) {
+        Alert.alert('Error', error.message || 'Failed to send reset email.');
+        return;
+      }
+
       Alert.alert(
-        'Code Sent! 📧',
-        `A password reset code has been sent to ${phoneEmail}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to OTP verification screen
-              router.push({
-                pathname: '/(auth)/verify-otp',
-                params: { phoneEmail }
-              });
-            },
-          },
-        ]
+        'Email Sent 📧',
+        `We've sent a password reset link to ${input}. Open it to set a new password.`,
+        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
       );
     } catch (error) {
       console.error('Send code error:', error);

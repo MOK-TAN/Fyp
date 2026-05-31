@@ -1,22 +1,24 @@
 // (parking-owner)/land-details/[id].tsx
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { supabase } from '../../../lib/supabase';
+
 
 const AANA_TO_SQFT = 342.25;
 const sqftToAana = (s: number) => Math.round((s / AANA_TO_SQFT) * 100) / 100;
@@ -44,6 +46,8 @@ type Owner = {
 };
 
 export default function LandDetails() {
+
+  
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [land, setLand] = useState<Land | null>(null);
@@ -55,6 +59,15 @@ export default function LandDetails() {
   const [proposedRent, setProposedRent] = useState('');
   const [startDate, setStartDate] = useState(''); // YYYY-MM-DD
   const [endDate, setEndDate] = useState('');
+
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+
+  const toYMD = (d: Date) => {
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
+  };
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [k: string]: string }>({});
@@ -360,7 +373,7 @@ export default function LandDetails() {
               </View>
 
               {/* Start date */}
-              <View style={s.field}>
+              {/* <View style={s.field}>
                 <Text style={s.label}>Start Date</Text>
                 <View style={[s.input, errors.start && s.inputError]}>
                   <Ionicons name="calendar-outline" size={16} color="#9CA3AF" />
@@ -376,10 +389,40 @@ export default function LandDetails() {
                   />
                 </View>
                 {errors.start && <Text style={s.errorText}>{errors.start}</Text>}
+              </View> */}
+
+              {/* Start date */}
+              <View style={s.field}>
+                <Text style={s.label}>Start Date</Text>
+                <TouchableOpacity
+                  style={[s.input, errors.start && s.inputError]}
+                  onPress={() => setShowStartPicker(true)}
+                >
+                  <Ionicons name="calendar-outline" size={16} color="#9CA3AF" />
+                  <Text style={[s.inputField, { marginLeft: 6, color: startDate ? '#111827' : '#9CA3AF' }]}>
+                    {startDate || 'Select start date'}
+                  </Text>
+                </TouchableOpacity>
+                {errors.start && <Text style={s.errorText}>{errors.start}</Text>}
               </View>
+              {showStartPicker && (
+                <DateTimePicker
+                  value={startDate ? new Date(startDate) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={new Date()}
+                  onChange={(event, selected) => {
+                    setShowStartPicker(false);
+                    if (selected) {
+                      setStartDate(toYMD(selected));
+                      if (errors.start) setErrors({ ...errors, start: '' });
+                    }
+                  }}
+                />
+              )}
 
               {/* End date */}
-              <View style={s.field}>
+              {/* <View style={s.field}>
                 <Text style={s.label}>End Date</Text>
                 <View style={[s.input, errors.end && s.inputError]}>
                   <Ionicons name="calendar-outline" size={16} color="#9CA3AF" />
@@ -395,7 +438,37 @@ export default function LandDetails() {
                   />
                 </View>
                 {errors.end && <Text style={s.errorText}>{errors.end}</Text>}
+              </View> */}
+
+              {/* End date */}
+              <View style={s.field}>
+                <Text style={s.label}>End Date</Text>
+                <TouchableOpacity
+                  style={[s.input, errors.end && s.inputError]}
+                  onPress={() => setShowEndPicker(true)}
+                >
+                  <Ionicons name="calendar-outline" size={16} color="#9CA3AF" />
+                  <Text style={[s.inputField, { marginLeft: 6, color: endDate ? '#111827' : '#9CA3AF' }]}>
+                    {endDate || 'Select end date'}
+                  </Text>
+                </TouchableOpacity>
+                {errors.end && <Text style={s.errorText}>{errors.end}</Text>}
               </View>
+              {showEndPicker && (
+                <DateTimePicker
+                  value={endDate ? new Date(endDate) : (startDate ? new Date(startDate) : new Date())}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={startDate ? new Date(startDate) : new Date()}
+                  onChange={(event, selected) => {
+                    setShowEndPicker(false);
+                    if (selected) {
+                      setEndDate(toYMD(selected));
+                      if (errors.end) setErrors({ ...errors, end: '' });
+                    }
+                  }}
+                />
+              )}
 
               {/* Message */}
               <View style={s.field}>
