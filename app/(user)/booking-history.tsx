@@ -230,8 +230,21 @@ const BookingHistory = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <Text style={styles.title}>My Bookings</Text>
+      </View> */}
+
+      <View style={styles.header}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="arrow-back" size={24} color="#111827" />
+          </TouchableOpacity>
+          <Text style={[styles.title, { flex: 1, textAlign: 'center' }]}>My Bookings</Text>
+          <View style={{ width: 24 }} />
+        </View>
       </View>
 
       {/* Tabs */}

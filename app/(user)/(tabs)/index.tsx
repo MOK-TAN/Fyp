@@ -11,16 +11,18 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 import { TextInput } from "react-native";
 import MapView, { Callout, Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
+
 import BottomTabs from '../../../components/BottomTabs';
 import FilterModal from '../../../components/FilterModal';
 import { supabase } from '../../../lib/supabase';
 import { styles } from './index.styles';
+
 
 interface ParkingSpot {
   id: string;
@@ -49,7 +51,10 @@ const UserDashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const [showFilter, setShowFilter] = useState(false);
+  // const [selectedFilter, setSelectedFilter] = useState<'nearby' | 'cheapest' | 'available'>('nearby');
+
   const [selectedFilter, setSelectedFilter] = useState<'nearby' | 'cheapest' | 'available'>('nearby');
+  const [appliedSort, setAppliedSort] = useState<string>('distance');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
@@ -79,31 +84,73 @@ const UserDashboard = () => {
   });
 
   // ====================== NAVIGATION ======================
+  // const startNavigation = (latitude: number, longitude: number, title: string) => {
+  //   Alert.alert("Open in Maps", "Choose an app", [
+  //     {
+  //       text: "Apple Maps",
+  //       onPress: async () => {
+  //         const url = `http://maps.apple.com/?daddr=${latitude},${longitude}`;
+  //         await Linking.openURL(url);
+  //       },
+  //     },
+  //     {
+  //       text: "Google Maps",
+  //       onPress: async () => {
+  //         const url = `comgooglemaps://?daddr=${latitude},${longitude}&directionsmode=driving`;
+  //         const supported = await Linking.canOpenURL(url);
+  //         if (supported) {
+  //           await Linking.openURL(url);
+  //         } else {
+  //           await Linking.openURL(
+  //             `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
+  //           );
+  //         }
+  //       },
+  //     },
+  //     { text: "Cancel", style: "cancel" },
+  //   ]);
+  // };
+
   const startNavigation = (latitude: number, longitude: number, title: string) => {
-    Alert.alert("Open in Maps", "Choose an app", [
-      {
-        text: "Apple Maps",
+    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+
+    const openGoogle = async () => {
+      const appUrl =
+        Platform.OS === 'ios'
+          ? `comgooglemaps://?daddr=${latitude},${longitude}&directionsmode=driving`
+          : `google.navigation:q=${latitude},${longitude}`;
+      try {
+        const supported = await Linking.canOpenURL(appUrl);
+        await Linking.openURL(supported ? appUrl : webUrl);
+      } catch {
+        await Linking.openURL(webUrl);
+      }
+    };
+
+    const buttons: any[] = [{ text: 'Google Maps', onPress: openGoogle }];
+    if (Platform.OS === 'ios') {
+      buttons.unshift({
+        text: 'Apple Maps',
         onPress: async () => {
-          const url = `http://maps.apple.com/?daddr=${latitude},${longitude}`;
-          await Linking.openURL(url);
+          await Linking.openURL(`http://maps.apple.com/?daddr=${latitude},${longitude}`);
         },
-      },
-      {
-        text: "Google Maps",
-        onPress: async () => {
-          const url = `comgooglemaps://?daddr=${latitude},${longitude}&directionsmode=driving`;
-          const supported = await Linking.canOpenURL(url);
-          if (supported) {
-            await Linking.openURL(url);
-          } else {
-            await Linking.openURL(
-              `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
-            );
-          }
-        },
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
+      });
+    }
+    buttons.push({ text: 'Cancel', style: 'cancel' });
+
+    Alert.alert('Navigate', `Open directions to ${title}?`, buttons);
+  };
+
+  const handleSpotActions = (spot: any) => {
+    Alert.alert(
+      spot.name,
+      `${spot.address}\nRs ${spot.price}/hr · ${spot.slotsAvailable} slots`,
+      [
+        { text: 'Book Now', onPress: () => handleParkingPress(spot) },
+        { text: 'Navigate', onPress: () => startNavigation(spot.latitude, spot.longitude, spot.name) },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   // ====================== FETCH ======================
@@ -310,13 +357,33 @@ const UserDashboard = () => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // const getFilteredSpots = () => {
+  //   let filtered = [...parkingSpots];
+  //   if (selectedFilter === 'cheapest') {
+  //     filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+  //   } else if (selectedFilter === 'available') {
+  //     filtered = filtered.filter(spot => spot.isOpen && spot.slotsAvailable > 0);
+  //   }
+  //   return filtered;
+  // };
+
   const getFilteredSpots = () => {
     let filtered = [...parkingSpots];
+
+    // Quick-filter chips
     if (selectedFilter === 'cheapest') {
       filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
     } else if (selectedFilter === 'available') {
       filtered = filtered.filter(spot => spot.isOpen && spot.slotsAvailable > 0);
     }
+
+    // Advanced filter (modal)
+    if (appliedSort === 'price') {
+      filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+    } else if (appliedSort === 'slots') {
+      filtered.sort((a, b) => b.slotsAvailable - a.slotsAvailable);
+    }
+
     return filtered;
   };
 
@@ -475,7 +542,8 @@ const UserDashboard = () => {
                 coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
                 pinColor="#22C55E"
               >
-                <Callout tooltip onPress={() => {}}>
+                {/* <Callout tooltip onPress={() => {}}> */}
+                {/* <Callout tooltip onPress={() => handleParkingPress(spot)}>
                   <View style={styles.calloutContainer}>
                     <Text style={styles.calloutTitle}>{spot.name}</Text>
                     <Text style={styles.calloutAddress}>{spot.address}</Text>
@@ -487,7 +555,7 @@ const UserDashboard = () => {
                       </Text>
                     </View>
 
-                    {/* Two action buttons */}
+                    
                     <View style={styles.calloutActions}>
                       <TouchableOpacity
                         style={styles.calloutNavButton}
@@ -505,6 +573,24 @@ const UserDashboard = () => {
                         <Text style={styles.calloutBookButtonText}>Book Now</Text>
                       </TouchableOpacity>
                     </View>
+                  </View>
+                </Callout> */}
+
+                <Callout tooltip onPress={() => handleSpotActions(spot)}>
+                  <View style={styles.calloutContainer}>
+                    <Text style={styles.calloutTitle}>{spot.name}</Text>
+                    <Text style={styles.calloutAddress}>{spot.address}</Text>
+
+                    <View style={styles.calloutInfo}>
+                      <Text style={styles.calloutPrice}>Rs {spot.price}/hr</Text>
+                      <Text style={{ color: spot.isOpen ? '#22C55E' : '#EF4444', fontWeight: '600' }}>
+                        {spot.slotsAvailable} slots
+                      </Text>
+                    </View>
+
+                    <Text style={{ marginTop: 6, color: '#3B82F6', fontWeight: '600', fontSize: 12 }}>
+                      Tap for options →
+                    </Text>
                   </View>
                 </Callout>
               </Marker>
@@ -676,7 +762,7 @@ const UserDashboard = () => {
       </ScrollView>
 
       <FilterModal visible=
-{showFilter} onClose={() => setShowFilter(false)} onApply={() => {}} />
+{showFilter} onClose={() => setShowFilter(false)} onApply={(filters) => setAppliedSort(filters.sortBy)} />
       <BottomTabs />
       {/* Save Location Modal */}
       {showSaveModal && (

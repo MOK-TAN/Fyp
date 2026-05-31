@@ -151,8 +151,10 @@ const Profile = () => {
             <Text style={styles.menuText}>Change Password</Text>
             <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
+<TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(user)/notification')}
+          >
             <Ionicons name="notifications-outline" size={22} color="#111827" />
             <Text style={styles.menuText}>Notifications</Text>
             <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />

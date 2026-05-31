@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FAQ = {
@@ -26,7 +26,7 @@ const FAQS: FAQ[] = [
   },
   {
     question: 'What payment methods are accepted?',
-    answer: 'We accept eSewa, Khalti digital wallets, and cash payment at the parking location.',
+    answer: 'We accept  Khalti digital wallets, and cash payment at the parking location.',
   },
   {
     question: 'Can I cancel my booking?',

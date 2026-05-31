@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const SECTIONS = [
@@ -24,7 +24,7 @@ const SECTIONS = [
   },
   {
     title: '4. Bookings and Payments',
-    content: 'All bookings are subject to availability. Prices are set by parking facility owners and displayed in Nepali Rupees (Rs). A 5% service fee is applied to each booking. Payment can be made via eSewa, Khalti, or cash at the facility. Confirmed bookings generate a unique QR code for facility access.',
+    content: 'All bookings are subject to availability. Prices are set by parking facility owners and displayed in Nepali Rupees (Rs). A 5% service fee is applied to each booking. Payment can be made via  Khalti, or cash at the facility. Confirmed bookings generate a unique QR code for facility access.',
   },
   {
     title: '5. Cancellation Policy',

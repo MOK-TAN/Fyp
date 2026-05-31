@@ -95,29 +95,43 @@ export default function Profile() {
         {/* Account Section */}
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.menuList}>
-          <TouchableOpacity style={styles.menuItem}>
+          {/* <TouchableOpacity style={styles.menuItem}>
+            <Ionicons name="person-outline" size={20} color="#111827" />
+            <Text style={styles.menuText}>Profile</Text>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity> */}
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(parking-owner)/edit-profile')}>
             <Ionicons name="person-outline" size={20} color="#111827" />
             <Text style={styles.menuText}>Profile</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          {/* <TouchableOpacity style={styles.menuItem}>
+            <Ionicons name="lock-closed-outline" size={20} color="#111827" />
+            <Text style={styles.menuText}>Password</Text>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity> */}
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(parking-owner)/change-password')}>
             <Ionicons name="lock-closed-outline" size={20} color="#111827" />
             <Text style={styles.menuText}>Password</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          {/* <TouchableOpacity style={styles.menuItem}>
+            <Ionicons name="notifications-outline" size={20} color="#111827" />
+            <Text style={styles.menuText}>Notifications</Text>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity> */}
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(parking-owner)/notifications')}>
             <Ionicons name="notifications-outline" size={20} color="#111827" />
             <Text style={styles.menuText}>Notifications</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="heart-outline" size={20} color="#111827" />
-            <Text style={styles.menuText}>Favourites</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
+          
         </View>
 
         {/* More Section */}
@@ -150,11 +164,7 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <Ionicons name="help-circle-outline" size={20} color="#111827" />
-            <Text style={styles.menuText}>Help</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
+          
 
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color="#EF4444" />

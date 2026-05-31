@@ -2,13 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -432,14 +432,8 @@ export default function AdminReports() {
         {/* Payment Methods */}
         <SectionHeader title="Payment Methods" />
         <View style={styles.compareCard}>
-          <CompareBarRow
-            label="eSewa"
-            value={data?.esewa.count ?? 0}
-            total={data?.bookingCount ?? 0}
-            color="#22C55E"
-            rightLabel={`${data?.esewa.count ?? 0} · ${formatCurrency(data?.esewa.revenue ?? 0)}`}
-          />
-          <View style={{ height: 12 }} />
+          
+          
           <CompareBarRow
             label="Khalti"
             value={data?.khalti.count ?? 0}

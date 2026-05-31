@@ -140,17 +140,37 @@ export default function ActiveParking() {
   };
 
   // Timer counts UP
+  // useEffect(() => {
+  //   if (!booking) return;
+
+  //   timerRef.current = setInterval(() => {
+  //     setElapsedSeconds(prev => prev + 1);
+  //   }, 1000);
+
+  //   return () => {
+  //     if (timerRef.current) clearInterval(timerRef.current);
+  //   };
+  // }, [booking]);
+
+  // Timer counts UP — recomputed from actual_start_time each tick (self-correcting)
   useEffect(() => {
     if (!booking) return;
 
-    timerRef.current = setInterval(() => {
-      setElapsedSeconds(prev => prev + 1);
-    }, 1000);
+    const startMs = booking.actual_start_time
+      ? new Date(booking.actual_start_time).getTime()
+      : Date.now();
+
+    const tick = () => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+    };
+
+    tick(); // update immediately so it doesn't sit at 00:00:00
+    timerRef.current = setInterval(tick, 1000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [booking]);
+  }, [booking?.id, booking?.actual_start_time]);
 
   const formatTimer = (seconds: number) => {
     const h = Math.floor(seconds / 3600);

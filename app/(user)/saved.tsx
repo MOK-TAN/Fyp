@@ -4,12 +4,14 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import BottomTabs from '../../components/BottomTabs';
 import { supabase } from '../../lib/supabase';
@@ -155,6 +157,21 @@ const SavedParking = () => {
     );
   };
 
+  const openInMaps = async (latitude?: number, longitude?: number) => {
+    if (latitude == null || longitude == null) return;
+    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+    const appUrl =
+      Platform.OS === 'ios'
+        ? `http://maps.apple.com/?daddr=${latitude},${longitude}`
+        : `google.navigation:q=${latitude},${longitude}`;
+    try {
+      const supported = await Linking.canOpenURL(appUrl);
+      await Linking.openURL(supported ? appUrl : webUrl);
+    } catch {
+      await Linking.openURL(webUrl);
+    }
+  };
+
   const handleItemPress = (item: SavedItem) => {
     if (item.type === 'facility') {
       router.push({
@@ -168,10 +185,19 @@ const SavedParking = () => {
       });
     } else {
       // For personal location - you can later navigate to map centered on this location
+      // Alert.alert(
+      //   item.name,
+      //   `Location: ${item.latitude?.toFixed(5)}, ${item.longitude?.toFixed(5)}\n\n${item.note || ''}`,
+      //   [{ text: 'OK' }]
+      // );
+
       Alert.alert(
         item.name,
         `Location: ${item.latitude?.toFixed(5)}, ${item.longitude?.toFixed(5)}\n\n${item.note || ''}`,
-        [{ text: 'OK' }]
+        [
+          { text: 'Navigate', onPress: () => openInMaps(item.latitude, item.longitude) },
+          { text: 'Close', style: 'cancel' },
+        ]
       );
       // Future: Center map or open directions
     }
@@ -203,10 +229,25 @@ const SavedParking = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Saved Locations</Text>
           <Text style={styles.subtitle}>{savedItems.length} total saved</Text>
+        </View> */}
+
+        <View style={styles.header}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="arrow-back" size={24} color="#111827" />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={styles.title}>Saved Locations</Text>
+            <Text style={styles.subtitle}>{savedItems.length} total saved</Text>
+          </View>
+          <View style={{ width: 24 }} />
         </View>
       </View>
 

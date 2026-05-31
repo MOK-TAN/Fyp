@@ -191,6 +191,18 @@ export default function Profile() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(land-owner)/edit-profile')}>
+            <Ionicons name="person-outline" size={22} color="#6B7280" />
+            <Text style={styles.menuText}>Edit Profile</Text>
+            <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(land-owner)/change-password')}>
+            <Ionicons name="lock-closed-outline" size={22} color="#6B7280" />
+            <Text style={styles.menuText}>Change Password</Text>
+            <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+          </TouchableOpacity>
+
          
 
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>

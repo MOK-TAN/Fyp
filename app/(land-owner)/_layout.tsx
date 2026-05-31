@@ -66,6 +66,8 @@ export default function LandownerLayout() {
       />
       {/* Hide add-land-plot from tab bar — accessed via button */}
       <Tabs.Screen name="add-land-plot" options={{ href: null }} />
+      <Tabs.Screen name="edit-profile" options={{ href: null }} />
+      <Tabs.Screen name="change-password" options={{ href: null }} />
     </Tabs>
   );
 }
