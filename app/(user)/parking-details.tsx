@@ -5,11 +5,10 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Image,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { styles } from './parking-details.styles';
@@ -275,42 +274,7 @@ const fetchReviews = async () => {
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Image Carousel */}
-        <View style={styles.imageContainer}>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / width);
-              setCurrentImageIndex(index);
-            }}
-            scrollEventThrottle={16}
-          >
-            {images.map((image, index) => (
-              <Image
-                key={index}
-                source={{ uri: image }}
-                style={styles.image}
-              />
-            ))}
-          </ScrollView>
-          
-          {/* Image Indicators */}
-          {images.length > 1 && (
-            <View style={styles.imageIndicators}>
-              {images.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicator,
-                    currentImageIndex === index && styles.indicatorActive
-                  ]}
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        
 
         {/* Main Info */}
         <View style={styles.infoSection}>

@@ -12,21 +12,21 @@
 export const KHALTI_CONFIG = {
   // Public key is safe to ship in the app bundle.
   // Secret key NEVER goes here — it lives only in the Supabase Edge Function secrets.
-  publicKey: 'test_public_key_REPLACE_ME',
+  publicKey: 'e5c7eea1dfb74927b5ccd6180a201fbc',
 
   // Sandbox base URL. For production switch to https://khalti.com/api/v2
   baseUrl: 'https://dev.khalti.com/api/v2',
 
   // Deep link the WebView returns to after payment.
   // Must match the `scheme` declared in app.json.
-  returnUrl: 'parkease://payment/callback',
+  returnUrl: 'https://parkease.app/payment/callback',
 
   // Required by Khalti — your business URL. For sandbox any URL works.
   websiteUrl: 'https://parkease.app',
 
   // Set to true to disable the Khalti option in the UI while credentials are pending.
   // Set to false once you've pasted real credentials and deployed the edge functions.
-  isConfigured: false,
+  isConfigured: true,
 };
 
 // Helper used by payment-selection.tsx to decide whether to show Khalti as available

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type Slot = {
@@ -70,6 +70,7 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, [activeSlot]);
 
+  // convert 1234 to 1:11:11
   const formatTime = (s: number) => {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);

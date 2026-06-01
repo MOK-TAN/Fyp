@@ -139,20 +139,7 @@ export default function ActiveParking() {
     }
   };
 
-  // Timer counts UP
-  // useEffect(() => {
-  //   if (!booking) return;
-
-  //   timerRef.current = setInterval(() => {
-  //     setElapsedSeconds(prev => prev + 1);
-  //   }, 1000);
-
-  //   return () => {
-  //     if (timerRef.current) clearInterval(timerRef.current);
-  //   };
-  // }, [booking]);
-
-  // Timer counts UP — recomputed from actual_start_time each tick (self-correcting)
+  
   useEffect(() => {
     if (!booking) return;
 
@@ -372,6 +359,8 @@ export default function ActiveParking() {
           </TouchableOpacity>
         </View>
       </View>
+
+      
     );
   }
 

@@ -362,6 +362,8 @@ export default function PaymentSelection() {
         .eq('id', userId)
         .single();
 
+      console.log('Sending return_url:', KHALTI_CONFIG.returnUrl);
+
       // Call initiate edge function
       const { data: initData, error: initError } = await supabase.functions.invoke(
         'initiate-khalti-payment',
