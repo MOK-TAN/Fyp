@@ -80,6 +80,7 @@ export default function Dashboard() {
       .padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
   };
 
+  
   const confirmBooking = (parking: Parking, slotId: string) => {
     Alert.alert(
       "Confirm Parking",
