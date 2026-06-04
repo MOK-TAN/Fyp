@@ -86,6 +86,7 @@ export default function MyLand() {
     fetchLands();
   };
 
+
   const getAgreementForLand = (landId: string) =>
     agreements.find(a => a.land_id === landId);
 

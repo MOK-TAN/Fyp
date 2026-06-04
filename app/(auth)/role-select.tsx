@@ -1,16 +1,16 @@
-import { router } from "expo-router";
-import { Button, Text, View } from "react-native";
+// import { router } from "expo-router";
+// import { Button, Text, View } from "react-native";
 
-export default function RoleSelect() {
-  return (
-    <View>
-      <Button title="← Back" onPress={() => router.back()} />
+// export default function RoleSelect() {
+//   return (
+//     <View>
+//       <Button title="← Back" onPress={() => router.back()} />
 
-      <Text>Select Role</Text>
+//       <Text>Select Role</Text>
 
-      <Button title="User" onPress={() => router.push("/(auth)/signup?role=user")} />
-      <Button title="Land Owner" onPress={() => router.push("/(auth)/signup?role=land_owner")} />
-      <Button title="Parking Owner" onPress={() => router.push("/(auth)/signup?role=parking_owner")} />
-    </View>
-  );
-}
+//       <Button title="User" onPress={() => router.push("/(auth)/signup?role=user")} />
+//       <Button title="Land Owner" onPress={() => router.push("/(auth)/signup?role=land_owner")} />
+//       <Button title="Parking Owner" onPress={() => router.push("/(auth)/signup?role=parking_owner")} />
+//     </View>
+//   );
+// }

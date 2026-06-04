@@ -57,8 +57,8 @@ export default function LandownerDashboard() {
       const { data: lands } = await supabase
         .from('land_listings')
         .select('area_sqft, approval_status')
-        .eq('owner_id', user.id);
-
+        .eq('owner_id', user.id)
+        
       const totalSqft = (lands || [])
         .filter(l => l.approval_status === 'approved')
         .reduce((sum, l) => sum + (l.area_sqft || 0), 0);

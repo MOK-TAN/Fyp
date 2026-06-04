@@ -491,6 +491,8 @@ const UserDashboard = () => {
         </View>
       </View>
 
+      
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Search + Filter */}
         <View style={styles.searchSection}>
@@ -542,39 +544,7 @@ const UserDashboard = () => {
                 coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
                 pinColor="#22C55E"
               >
-                {/* <Callout tooltip onPress={() => {}}> */}
-                {/* <Callout tooltip onPress={() => handleParkingPress(spot)}>
-                  <View style={styles.calloutContainer}>
-                    <Text style={styles.calloutTitle}>{spot.name}</Text>
-                    <Text style={styles.calloutAddress}>{spot.address}</Text>
-
-                    <View style={styles.calloutInfo}>
-                      <Text style={styles.calloutPrice}>Rs {spot.price}/hr</Text>
-                      <Text style={{ color: spot.isOpen ? '#22C55E' : '#EF4444', fontWeight: '600' }}>
-                        {spot.slotsAvailable} slots
-                      </Text>
-                    </View>
-
-                    
-                    <View style={styles.calloutActions}>
-                      <TouchableOpacity
-                        style={styles.calloutNavButton}
-                        onPress={() => startNavigation(spot.latitude, spot.longitude, spot.name)}
-                      >
-                        <Ionicons name="navigate" size={14} color="#3B82F6" />
-                        <Text style={styles.calloutNavButtonText}>Navigate</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.calloutBookButton}
-                        onPress={() => handleParkingPress(spot)}
-                      >
-                        <Ionicons name="car" size={14} color="#fff" />
-                        <Text style={styles.calloutBookButtonText}>Book Now</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Callout> */}
+               
 
                 <Callout tooltip onPress={() => handleSpotActions(spot)}>
                   <View style={styles.calloutContainer}>
@@ -607,12 +577,12 @@ const UserDashboard = () => {
                   <View style={styles.calloutContainer}>
                     <Text style={styles.calloutTitle}>{loc.name}</Text>
                     {loc.note && <Text style={styles.calloutAddress}>{loc.note}</Text>}
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                       style={[styles.navigateButton, { backgroundColor: '#3B82F6' }]}
                       onPress={() => startNavigation(loc.latitude, loc.longitude, loc.name)}
                     >
                       <Text style={styles.navigateButtonText}>Navigate Here</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                   </View>
                 </Callout>
               </Marker>
